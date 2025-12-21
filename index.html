@@ -8,23 +8,31 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 body{margin:0;font-family:Arial;background:linear-gradient(135deg,#141e30,#243b55);color:white;}
-.container{max-width:600px;margin:auto;padding:20px;}
+.container{max-width:700px;margin:auto;padding:20px;}
 .hidden{display:none;}
 .option{width:90%;padding:18px;margin:12px auto;border-radius:50px;border:none;background:rgba(255,255,255,.2);color:white;font-size:18px;cursor:pointer;transition:0.3s;box-shadow:0 0 5px rgba(0,0,0,.3);}
 .option:hover{background:rgba(255,255,255,.35);transform:scale(1.05);}
-.btn{padding:15px 30px;border-radius:40px;background:#00c6ff;color:black;font-size:18px;cursor:pointer;margin:10px auto;display:block;}
+.btn{padding:15px 30px;border-radius:40px;background:#00c6ff;color:black;font-size:18px;cursor:pointer;margin:10px auto;display:block;transition:0.3s;}
+.btn:hover{transform:scale(1.05);}
 .loader{width:60px;height:60px;border:7px solid rgba(255,255,255,.3);border-top:7px solid #00c6ff;border-radius:50%;animation:spin 1s linear infinite;margin:30px auto;}
 @keyframes spin{100%{transform:rotate(360deg)}}
 #cameraSection{position:relative;text-align:center;margin-top:20px;}
 #shutter{position:absolute;top:0;left:0;width:100%;height:100%;background:white;opacity:0.8;z-index:100;display:none;}
+#emojiOverlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;}
 .progress-bar{width:90%;height:20px;background:rgba(255,255,255,.2);border-radius:10px;margin:20px auto;overflow:hidden;}
 .progress-fill{height:100%;width:0%;background:#00c6ff;transition:1s;}
-.card{border:1px solid #555;border-radius:15px;padding:10px;margin:10px;background:rgba(0,0,0,.3);}
+#confettiCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;}
+.card{border-radius:15px;padding:15px;margin:10px;background:linear-gradient(135deg,#ff416c,#ff4b2b);cursor:pointer;transition:0.3s;position:relative;overflow:hidden;}
+.card:hover{transform:scale(1.03);box-shadow:0 0 15px rgba(255,255,255,.5);}
 .status-unused{color:#00ff00;font-weight:bold;}
 .status-used{color:#ff4444;font-weight:bold;}
-.copyBtn{padding:5px 10px;margin-left:10px;border-radius:15px;background:#fff;color:black;cursor:pointer;}
-#confettiCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;}
-.answers{margin-top:10px;}
+.copyBtn, .delBtn{padding:5px 10px;margin:5px;border-radius:15px;background:#fff;color:black;cursor:pointer;transition:0.2s;font-size:14px;}
+.copyBtn:hover,.delBtn:hover{background:#00c6ff;color:white;}
+.answers{margin-top:10px;max-height:200px;overflow:auto;background:rgba(0,0,0,.3);padding:10px;border-radius:10px;}
+#searchNick{width:90%;padding:10px;margin:10px auto;display:block;border-radius:10px;border:none;font-size:16px;}
+.sparkle{position:absolute;font-size:14px;animation:floatUp 2s linear infinite;}
+@keyframes floatUp{0%{opacity:1;transform:translateY(0) rotate(0deg);}100%{opacity:0;transform:translateY(-60px) rotate(360deg);}}
+.glow{box-shadow:0 0 15px #fff7,0 0 30px #00c6ff,0 0 45px #ff4b2b;}
 </style>
 </head>
 <body>
@@ -66,15 +74,14 @@ body{margin:0;font-family:Arial;background:linear-gradient(135deg,#141e30,#243b5
 <div id="cameraSection" class="hidden">
 <video id="cam" autoplay playsinline style="width:90%;border-radius:15px;"></video>
 <div id="shutter"></div>
-<div id="emojiOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></div>
+<div id="emojiOverlay"></div>
 <p id="prankMsg" style="margin-top:10px;font-size:18px;"></p>
-<button id="shareBtn" class="btn hidden" onclick="shareToAdmin()">Share with Admin ✅</button>
 <button id="closeBtn" class="btn hidden" onclick="closeCameraPrank()">Close ✖️</button>
 </div>
 
 <!-- Admin Portal -->
 <div id="adminPortal" class="hidden">
-<h1>Creator Portal 🔐</h1>
+<h1 style="text-align:center;">Creator Portal 🔐</h1>
 <input id="nick" placeholder="Link nickname">
 <button class="btn" onclick="createLink()">Create Link</button>
 <input id="searchNick" placeholder="Search nickname" oninput="filterCards()">
@@ -109,7 +116,6 @@ const Q=[
 {q:"🤯 Do you overthink at night?",o:["😵 YES","😶 NO","😐 MAYBE"]},
 {q:"😅 Have you found a better person than admin?",o:["No 😵‍💫","Yash 😁"]}
 ];
-
 const personalities=["Silent Overthinker 🧠","Chill but Observant 😎","Drama Friendly 🎭","Secret Keeper 🤐","Curious Explorer 🔍"];
 const vibes=["Calm but unpredictable","Friendly with hidden depth","Low drama, high awareness","Energetic and spontaneous","Quiet but sharp"];
 const funLines=["You answered confidently… maybe too confidently 😏","Your honesty fluctuated during the test","Sometimes honesty is complicated 😉","You know the truth, but chose convenience"];
@@ -117,13 +123,7 @@ let i=0,ans=[];
 
 // ==== Init App based on URL ====
 function initApp(){
- if(adminKey){
-   showAdmin();
- } else if(playId){
-   startTest();
- } else {
-   alert("Invalid or expired link");
- }
+ if(adminKey){showAdmin();} else if(playId){startTest();} else {alert("Invalid or expired link");}
 }
 
 // ==== Test Flow ====
@@ -194,40 +194,19 @@ function startCameraPrank(){
  document.getElementById("cameraSection").classList.remove("hidden");
  const video=document.getElementById("cam");
  navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false})
- .then(stream=>{video.srcObject=stream;
- blinkAndShutter(0);})
+ .then(stream=>{video.srcObject=stream;blinkAndShutter(0);})
  .catch(()=>{alert("Camera permission denied 😅");});
 }
 function blinkAndShutter(count){
  const shutter=document.getElementById("shutter");
  const emojiOverlay=document.getElementById("emojiOverlay");
- if(count>=3){
-   document.getElementById("shareBtn").classList.remove("hidden");
-   document.getElementById("closeBtn").classList.remove("hidden");
-   document.getElementById("prankMsg").innerText="😌 Relax… no photo was taken. Just a prank 😂";
-   return;
- }
- shutter.style.display="block";
- playShutterSound();
- showRandomEmoji();
-setTimeout(()=>{shutter.style.display="none";emojiOverlay.innerHTML="";},400);
-setTimeout(()=>{blinkAndShutter(count+1);},800);
+ if(count>=3){document.getElementById("closeBtn").classList.remove("hidden");document.getElementById("prankMsg").innerText="😌 Relax… no photo was taken. Just a prank 😂";return;}
+ shutter.style.display="block";playShutterSound();showRandomEmoji();
+ setTimeout(()=>{shutter.style.display="none";emojiOverlay.innerHTML="";},400);
+ setTimeout(()=>{blinkAndShutter(count+1);},800);
 }
 function playShutterSound(){const audio=new Audio("https://www.soundjay.com/camera/camera-shutter-click-03.mp3");audio.play();}
-function showRandomEmoji(){
- const overlay=document.getElementById("emojiOverlay");
- const emojis=["😂","😎","😱","🤪","🤯"];
- for(let i=0;i<10;i++){
-   const span=document.createElement("span");
-   span.innerText=emojis[Math.floor(Math.random()*emojis.length)];
-   span.style.position="absolute";
-   span.style.top=Math.random()*80+"%";
-   span.style.left=Math.random()*80+"%";
-   span.style.fontSize=(Math.random()*30+20)+"px";
-   overlay.appendChild(span);
- }
-}
-function shareToAdmin(){alert("✅ Shared with Admin (just a prank!)");closeCameraPrank();}
+function showRandomEmoji(){const overlay=document.getElementById("emojiOverlay");const emojis=["😂","😎","😱","🤪","🤯"];for(let i=0;i<10;i++){const span=document.createElement("span");span.innerText=emojis[Math.floor(Math.random()*emojis.length)];span.style.position="absolute";span.style.top=Math.random()*80+"%";span.style.left=Math.random()*80+"%";span.style.fontSize=(Math.random()*30+20)+"px";overlay.appendChild(span);}}
 function closeCameraPrank(){document.getElementById("cameraSection").classList.add("hidden");document.getElementById("result").classList.remove("hidden");}
 
 // ==== Admin Portal ====
@@ -240,13 +219,24 @@ function showAdmin(){
    snapshot.forEach(doc=>{
      const data=doc.data();
      const card=document.createElement("div");
-     card.className="card";
-     card.innerHTML=`<b>${data.nickname||"-"}</b> 
+     card.className="card glow";
+     card.innerHTML=`<h3>${data.nickname||"-"}</h3>
       <span class="${data.status==='used'?'status-used':'status-unused'}">[${data.status}]</span>
       <button class="copyBtn" onclick="copyLink('${BASE}?play=${doc.id}')">Copy Link</button>
-      <button class="copyBtn" onclick="deleteLink('${doc.id}')">Delete</button>
+      <button class="delBtn" onclick="deleteLink('${doc.id}')">Delete</button>
       <div class="answers hidden"></div>`;
-     card.querySelector("b").onclick=()=>{
+     
+     // sparkles animation
+     for(let j=0;j<5;j++){
+       const sp=document.createElement("span");
+       sp.className="sparkle";
+       sp.innerText=["✨","💫","🌟","🎉","🔥"][Math.floor(Math.random()*5)];
+       sp.style.left=Math.random()*90+"%";
+       sp.style.top=Math.random()*80+"%";
+       card.appendChild(sp);
+     }
+
+     card.querySelector("h3").onclick=()=>{
        const ansDiv=card.querySelector(".answers");
        if(ansDiv.classList.contains("hidden")){
          ansDiv.classList.remove("hidden");
@@ -261,13 +251,9 @@ function showAdmin(){
    });
  });
 }
-function createLink(){
- const n=document.getElementById("nick").value.trim();if(!n)return alert("Enter nickname");
- const id="L"+Date.now();
- db.collection("links").doc(id).set({nickname:n,status:"unused",created:Date.now()})
- .then(()=>{navigator.clipboard.writeText(location.origin+location.pathname+"?play="+id);alert("Link copied!");});
-}
+function createLink(){const n=document.getElementById("nick").value.trim();if(!n)return alert("Enter nickname");const id="L"+Date.now();db.collection("links").doc(id).set({nickname:n,status:"unused",created:Date.now()}).then(()=>{navigator.clipboard.writeText(location.origin+location.pathname+"?play="+id);alert("Link copied! 😏");});}
 function copyLink(link){navigator.clipboard.writeText(link);alert("Copied!");}
+function deleteLink(id){if(confirm("Delete this response?")){db.collection("links").doc(id).delete();}}
 
 // ==== Confetti ====
 function startConfetti(){
@@ -290,9 +276,7 @@ function startConfetti(){
 }
 function filterCards(){
  const val=document.getElementById("searchNick").value.toLowerCase();
- document.querySelectorAll("#linksContainer .card").forEach(c=>{
-   c.style.display=c.innerText.toLowerCase().includes(val)?"block":"none";
-});
+ document.querySelectorAll("#linksContainer .card").forEach(c=>{c.style.display=c.innerText.toLowerCase().includes(val)?"block":"none";});
 }
 </script>
 </body>
