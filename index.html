@@ -2,261 +2,234 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Personality & Vibe Test</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<title>Prank Personality & Vibe Test 🔮</title>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
-
 <style>
-body{
-  margin:0;
-  font-family:Arial, sans-serif;
-  background:linear-gradient(135deg,#141e30,#243b55);
-  color:white;
-}
+body{margin:0;font-family:Arial;background:linear-gradient(135deg,#141e30,#243b55);color:white;}
 .container{max-width:600px;margin:auto;padding:20px;}
 .hidden{display:none;}
-h1,h2{text-align:center;}
-
-.option{
-  width:90%;
-  margin:12px auto;
-  padding:18px;
-  border-radius:50px;
-  font-size:18px;
-  background:rgba(255,255,255,0.15);
-  color:white;
-  border:2px solid rgba(255,255,255,0.3);
-}
-.option:hover{background:rgba(255,255,255,0.3);}
-
-.primary-btn{
-  padding:14px 25px;
-  font-size:18px;
-  border-radius:40px;
-  background:#00c6ff;
-  color:black;
-  display:block;
-  margin:20px auto;
-}
-
-.loader{
-  width:60px;height:60px;
-  border:7px solid rgba(255,255,255,0.3);
-  border-top:7px solid #00c6ff;
-  border-radius:50%;
-  animation:spin 1s linear infinite;
-  margin:30px auto;
-}
-@keyframes spin{100%{transform:rotate(360deg);}}
-
-table{
-  width:100%;
-  border-collapse:collapse;
-  font-size:12px;
-}
-td,th{
-  border:1px solid rgba(255,255,255,0.3);
-  padding:6px;
-  vertical-align:top;
-}
+.option{width:90%;padding:18px;margin:12px auto;border-radius:50px;border:none;background:rgba(255,255,255,.2);color:white;font-size:18px;cursor:pointer;transition:0.3s;}
+.option:hover{background:rgba(255,255,255,.35);transform:scale(1.05);}
+.btn{padding:15px 30px;border-radius:40px;background:#00c6ff;color:black;font-size:18px;cursor:pointer;margin:10px auto;display:block;}
+.loader{width:60px;height:60px;border:7px solid rgba(255,255,255,.3);border-top:7px solid #00c6ff;border-radius:50%;animation:spin 1s linear infinite;margin:30px auto;}
+@keyframes spin{100%{transform:rotate(360deg)}}
+#cameraSection{position:relative;text-align:center;margin-top:20px;}
+#shutter{position:absolute;top:0;left:0;width:100%;height:100%;background:white;opacity:0.8;z-index:100;}
+.progress-bar{width:90%;height:20px;background:rgba(255,255,255,.2);border-radius:10px;margin:20px auto;overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:#00c6ff;transition:1s;}
+.card{border:1px solid #555;border-radius:15px;padding:10px;margin:10px;}
+.status-unused{color:#00ff00;font-weight:bold;}
+.status-used{color:#ff4444;font-weight:bold;}
+.copyBtn{padding:5px 10px;margin-left:10px;border-radius:15px;background:#fff;color:black;cursor:pointer;}
 </style>
 </head>
-
 <body>
 <div class="container">
 
-<!-- LANDING -->
-<div id="landing">
-  <h1>Personality & Vibe Test 🔮</h1>
-  <p style="text-align:center">Answer honestly… or try 😏</p>
-  <button class="primary-btn" onclick="startTest()">Start</button>
+<!-- Landing Page -->
+<div id="start">
+<h1 style="text-align:center">Personality & Vibe Test 🔮</h1>
+<p style="text-align:center">Answer honestly… or try 😏</p>
+<center><button class="btn" onclick="initApp()">Start Test</button></center>
 </div>
 
-<!-- QUESTIONS -->
-<div id="questionBox" class="hidden">
-  <h2 id="qNo"></h2>
-  <p id="qText" style="text-align:center"></p>
-  <div id="options"></div>
+<!-- Question Section -->
+<div id="qBox" class="hidden">
+<h2 id="qNo"></h2>
+<p id="qText"></p>
+<div id="opts"></div>
 </div>
 
-<!-- LOADING -->
+<!-- Loading / Analysis -->
 <div id="loading" class="hidden">
-  <div class="loader"></div>
-  <p id="loadingText" style="text-align:center"></p>
+<div class="loader"></div>
+<p id="loadText" style="text-align:center;font-size:18px;"></p>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
 </div>
 
-<!-- RESULT -->
-<div id="result" class="hidden">
-  <h2>Result</h2>
-  <p id="lie"></p>
-  <p id="fun"></p>
-  <p id="personality"></p>
-  <p id="vibe"></p>
+<!-- Result Section -->
+<div id="result" class="hidden" style="text-align:center;">
+<h2>Results</h2>
+<p id="lie" style="font-size:20px;"></p>
+<p id="msg" style="font-size:18px;"></p>
+<p id="per" style="font-size:18px;"></p>
+<p id="vibe" style="font-size:18px;"></p>
+<button class="btn" onclick="startCameraPrank()">Take a Photo for Admin 😎</button>
 </div>
 
-<!-- ADMIN -->
-<div id="admin" class="hidden">
-  <h2>Creator Portal</h2>
-  <input id="nick" placeholder="Link nickname" style="width:100%;padding:10px">
-  <button class="primary-btn" onclick="createLink()">Create Link</button>
+<!-- Camera Prank -->
+<div id="cameraSection" class="hidden">
+<video id="cam" autoplay playsinline style="width:90%;border-radius:15px;"></video>
+<div id="shutter" class="hidden"></div>
+<p id="prankMsg" style="margin-top:10px;font-size:18px;"></p>
+</div>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Nickname</th>
-        <th>Status</th>
-        <th>Link</th>
-        <th>Lie%</th>
-        <th>Answers</th>
-      </tr>
-    </thead>
-    <tbody id="adminTable"></tbody>
-  </table>
+<!-- Admin Portal -->
+<div id="adminPortal" class="hidden">
+<h1>Creator Portal 🔐</h1>
+<input id="nick" placeholder="Link nickname">
+<button class="btn" onclick="createLink()">Create Link</button>
+<div id="linksContainer"></div>
 </div>
 
 </div>
 
 <script>
-/* ===== CONFIG ===== */
-const ADMIN_KEY = "K9xP7Q2LmZ";
-const BASE_URL = window.location.origin + window.location.pathname.replace(/\/$/, "");
-
-/* ===== FIREBASE ===== */
+// ==== Firebase Init ====
 firebase.initializeApp({
-  apiKey: "AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
-  authDomain: "prankgame-6ad46.firebaseapp.com",
-  projectId: "prankgame-6ad46",
+ apiKey:"AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
+ authDomain:"prankgame-6ad46.firebaseapp.com",
+ projectId:"prankgame-6ad46"
 });
-const db = firebase.firestore();
+const db=firebase.firestore();
+const params=new URLSearchParams(location.search);
+const playId=params.get("play");
+const adminKey=params.get("admin");
 
-/* ===== QUESTIONS ===== */
-const questions = [
- {q:"Have you ever dreamed about your future?", o:["YES","NO","MAYBE"]},
- {q:"Was this year actually good for you?", o:["YES","NO","NOT SURE"]},
- {q:"Have you ever been lost in someone's thoughts?", o:["YES","NO","MAYBE"]},
- {q:"Have you avoided someone intentionally?", o:["YES","NO","MAYBE"]},
- {q:"Have you replayed conversations in your head?", o:["YES","NO","MAYBE"]},
- {q:"Have you pretended to know something?", o:["YES","NO","MAYBE"]},
- {q:"Do people know the real you?", o:["YES","NO","NOT REALLY"]},
- {q:"Have you felt insecure around a friend?", o:["YES","NO","MAYBE"]},
- {q:"Have you hidden true feelings when asked?", o:["YES","NO","MAYBE"]},
- {q:"Have you found a better person than admin 😅", o:["No 😵‍💫","Yash 😁"], skip:true}
+// ==== Questions & Data ====
+const Q=[
+{q:"😶‍🌫️ Have you ever smiled at your phone and quickly locked it?",o:["😂 YES","😬 NO","🤔 MAYBE"]},
+{q:"🧠 Do you overthink conversations that already ended?",o:["😏 YES","🙄 NO","😐 MAYBE"]},
+{q:"😌 Have you said “I’m fine” when you weren’t?",o:["😅 YES","😶 NO","🤷‍♂️ MAYBE"]},
+{q:"👀 Ever stalked someone accidentally liking old post?",o:["😎 YES","🙈 NO","😐 MAYBE"]},
+{q:"🌙 Does your brain become creative at 2 AM?",o:["🌟 YES","😴 NO","🤔 MAYBE"]},
+{q:"😳 Have you hidden feelings when someone asked directly?",o:["😬 YES","😶 NO","🤔 MAYBE"]},
+{q:"😵‍💫 Have you felt insecure around a friend?",o:["😅 YES","🙄 NO","🤔 MAYBE"]},
+{q:"🌀 Have you replayed conversations in your head?",o:["😏 YES","🙄 NO","🤷‍♂️ MAYBE"]},
+{q:"🤯 Do you overthink at night?",o:["😵 YES","😶 NO","😐 MAYBE"]},
+{q:"😅 Have you found a better person than admin?",o:["No 😵‍💫","Yash 😁"]}
 ];
 
-/* ===== STATE ===== */
-let i = 0;
-let answers = [];
-const params = new URLSearchParams(window.location.search);
-const playId = params.get("play");
-const adminKey = params.get("admin");
+const personalities=["Silent Overthinker 🧠","Chill but Observant 😎","Drama Friendly 🎭","Secret Keeper 🤐","Curious Explorer 🔍"];
+const vibes=["Calm but unpredictable","Friendly with hidden depth","Low drama, high awareness","Energetic and spontaneous","Quiet but sharp"];
+const funLines=["You answered confidently… maybe too confidently 😏","Your honesty fluctuated during the test","Sometimes honesty is complicated 😉","You know the truth, but chose convenience"];
+let i=0,ans=[];
 
-/* ===== ADMIN MODE ===== */
-if (adminKey === ADMIN_KEY) {
-  document.getElementById("admin").classList.remove("hidden");
-  document.getElementById("landing").classList.add("hidden");
-  loadAdmin();
+// ==== Init App based on URL ====
+function initApp(){
+ if(adminKey){
+   showAdmin();
+ } else if(playId){
+   startTest();
+ } else {
+   alert("Invalid or expired link");
+ }
 }
 
-/* ===== FRIEND MODE ===== */
+// ==== Test Flow ====
 async function startTest(){
-  if(!playId) return alert("Invalid or expired link");
-  const ref = await db.collection("links").doc(playId).get();
-  if(!ref.exists || ref.data().status==="used"){
-    alert("This link is already used");
-    return;
-  }
-  document.getElementById("landing").classList.add("hidden");
-  showQ();
+ const doc=await db.collection("links").doc(playId).get();
+ if(!doc.exists||doc.data().status==="used"){alert("Link already used");return;}
+ document.getElementById("start").classList.add("hidden");
+ showQ();
 }
 
 function showQ(){
-  if(i>=questions.length){ submit(); return; }
-  document.getElementById("questionBox").classList.remove("hidden");
-  document.getElementById("qNo").innerText=`Question ${i+1}`;
-  document.getElementById("qText").innerText=questions[i].q;
-  const opt=document.getElementById("options");
-  opt.innerHTML="";
-  questions[i].o.forEach(v=>{
-    const b=document.createElement("button");
-    b.className="option";
-    b.innerText=v;
-    b.onclick=()=>{answers.push({q:questions[i].q,a:v});i++;showQ();};
-    opt.appendChild(b);
-  });
+ if(i>=Q.length){submit();return;}
+ document.getElementById("qBox").classList.remove("hidden");
+ document.getElementById("qNo").innerText="Question "+(i+1);
+ document.getElementById("qText").innerText=Q[i].q;
+ const o=document.getElementById("opts");o.innerHTML="";
+ Q[i].o.forEach(v=>{
+  const b=document.createElement("button");
+  b.className="option";b.innerText=v;
+  b.onclick=()=>{ans.push({q:Q[i].q,a:v});i++;showQ();}
+  o.appendChild(b);
+ });
 }
 
-/* ===== SUBMIT ===== */
 function submit(){
-  document.getElementById("questionBox").classList.add("hidden");
-  document.getElementById("loading").classList.remove("hidden");
+ document.getElementById("qBox").classList.add("hidden");
+ document.getElementById("loading").classList.remove("hidden");
+const steps=["🔍 Analyzing honesty…","🧠 Scanning personality…","🎭 Checking vibes…","📊 Finalizing report…"];
+let s=0;
+const loadText=document.getElementById("loadText");
+const fill=document.getElementById("progressFill");
+const interval=setInterval(()=>{
+  if(s>=steps.length){clearInterval(interval);showResults();return;}
+  loadText.innerText=steps[s];
+  fill.style.width=((s+1)/steps.length*100)+"%";
+  s++;
+},1200);
 
-  const steps=[
-    "Calculating honesty level…",
-    "Analyzing personality traits…",
-    "Processing vibe check…"
-  ];
-  let s=0;
-  document.getElementById("loadingText").innerText=steps[0];
-  const interval=setInterval(()=>{
-    s++; if(s<steps.length) document.getElementById("loadingText").innerText=steps[s];
-  },1200);
-
-  const lie=Math.floor(Math.random()*20)+76;
-
-  setTimeout(()=>{
-    clearInterval(interval);
-    document.getElementById("loading").classList.add("hidden");
-    document.getElementById("result").classList.remove("hidden");
-    document.getElementById("lie").innerText="Lie Probability: "+lie+"%";
-    document.getElementById("fun").innerText="Truth detected… but not completely 😏";
-    document.getElementById("personality").innerText="Personality: Silent Thinker 🧠";
-    document.getElementById("vibe").innerText="Vibe: Calm but unpredictable";
-  },3800);
-
-  db.collection("links").doc(playId).update({
-    status:"used",
-    lie,
-    answers,
-    finishedAt:Date.now()
-  });
+const lie=Math.floor(Math.random()*20)+76;
+setTimeout(()=>{
+ db.collection("links").doc(playId).update({
+  status:"used",
+  answers:ans,
+  lie,
+  personality:personalities[Math.floor(Math.random()*personalities.length)],
+  vibe:vibes[Math.floor(Math.random()*vibes.length)],
+  done:Date.now()
+ });
+},5000);
 }
 
-/* ===== ADMIN ===== */
+function showResults(){
+ document.getElementById("loading").classList.add("hidden");
+ document.getElementById("result").classList.remove("hidden");
+const liePercent=Math.floor(Math.random()*20)+76;
+document.getElementById("lie").innerText="Lie Probability: "+liePercent+"%";
+document.getElementById("msg").innerText=funLines[Math.floor(Math.random()*funLines.length)];
+document.getElementById("per").innerText="Personality: "+personalities[Math.floor(Math.random()*personalities.length)];
+document.getElementById("vibe").innerText="Vibe: "+vibes[Math.floor(Math.random()*vibes.length)];
+}
+
+// ==== Camera Prank ====
+function startCameraPrank(){
+ document.getElementById("cameraSection").classList.remove("hidden");
+ navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false})
+ .then(stream=>{document.getElementById("cam").srcObject=stream;
+ setTimeout(()=>{playShutterSound();simulateShutter();},2000);})
+ .catch(()=>{alert("Camera permission denied 😅");});
+}
+function playShutterSound(){
+ const audio=new Audio("https://www.soundjay.com/camera/camera-shutter-click-03.mp3");
+ audio.play();
+}
+function simulateShutter(){
+ const flash=document.getElementById("shutter");
+ flash.classList.remove("hidden");
+ setTimeout(()=>{
+ flash.classList.add("hidden");
+ document.getElementById("prankMsg").innerText="😌 Relax… no photo was taken. Just a prank 😂";
+},500);
+}
+
+// ==== Admin Portal ====
+function showAdmin(){
+ document.getElementById("start").classList.add("hidden");
+ document.getElementById("adminPortal").classList.remove("hidden");
+ const BASE=location.origin+location.pathname;
+ db.collection("links").orderBy("done","desc").onSnapshot(snapshot=>{
+   const container=document.getElementById("linksContainer"); container.innerHTML="";
+   snapshot.forEach(doc=>{
+     const x=doc.data();
+     const a=(x.answers||[]).map(v=>v.q+" → "+v.a).join("<br>");
+     container.innerHTML+=`<div class="card">
+     <b>Nickname:</b> ${x.nickname||"-"} <br>
+     <b>Status:</b> <span class="${x.status==='used'?'status-used':'status-unused'}">${x.status}</span><br>
+     <b>Link:</b> <span>${BASE}?play=${doc.id}</span>
+     <button class="copyBtn" onclick="copyLink('${BASE}?play=${doc.id}')">Copy</button><br>
+     <b>Lie %:</b> ${x.lie||"-"}<br>
+     <b>Personality:</b> ${x.personality||"-"}<br>
+     <b>Vibe:</b> ${x.vibe||"-"}<br>
+     <b>Answers:</b><br>${a||"-"}
+     </div>`;
+   });
+ });
+}
+
 function createLink(){
-  const nick=document.getElementById("nick").value.trim();
-  if(!nick) return alert("Enter nickname");
-  const id="L"+Date.now();
-  db.collection("links").doc(id).set({
-    nickname:nick,
-    status:"unused",
-    created:Date.now()
-  }).then(()=>{
-    navigator.clipboard.writeText(BASE_URL+"?play="+id);
-    alert("Link copied!");
-    loadAdmin();
-  });
+ const n=nick.value.trim();if(!n)return alert("Enter nickname");
+ const id="L"+Date.now();
+ db.collection("links").doc(id).set({nickname:n,status:"unused",created:Date.now()})
+ .then(()=>{navigator.clipboard.writeText(location.origin+location.pathname+"?play="+id);alert("Link copied!");});
 }
 
-function loadAdmin(){
-  db.collection("links").orderBy("created","desc").onSnapshot(snap=>{
-    const t=document.getElementById("adminTable");
-    t.innerHTML="";
-    snap.forEach(d=>{
-      const x=d.data();
-      const ans=(x.answers||[]).map(a=>`• ${a.q} → ${a.a}`).join("<br>");
-      t.innerHTML+=`
-        <tr>
-          <td>${x.nickname||""}</td>
-          <td>${x.status}</td>
-          <td>${BASE_URL}?play=${d.id}</td>
-          <td>${x.lie||"-"}</td>
-          <td>${ans||"-"}</td>
-        </tr>`;
-    });
-  });
-}
+function copyLink(link){navigator.clipboard.writeText(link);alert("Copied!");}
 </script>
 </body>
 </html>
