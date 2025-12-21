@@ -5,81 +5,61 @@
 <title>Personality & Vibe Test</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 
 <style>
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: linear-gradient(135deg,#141e30,#243b55);
-  color: white;
+body{
+  margin:0;
+  font-family:Arial, sans-serif;
+  background:linear-gradient(135deg,#141e30,#243b55);
+  color:white;
+}
+.container{max-width:600px;margin:auto;padding:20px;}
+.hidden{display:none;}
+h1,h2{text-align:center;}
+
+.option{
+  width:90%;
+  margin:12px auto;
+  padding:18px;
+  border-radius:50px;
+  font-size:18px;
+  background:rgba(255,255,255,0.15);
+  color:white;
+  border:2px solid rgba(255,255,255,0.3);
+}
+.option:hover{background:rgba(255,255,255,0.3);}
+
+.primary-btn{
+  padding:14px 25px;
+  font-size:18px;
+  border-radius:40px;
+  background:#00c6ff;
+  color:black;
+  display:block;
+  margin:20px auto;
 }
 
-.container {
-  max-width: 600px;
-  margin: auto;
-  padding: 20px;
+.loader{
+  width:60px;height:60px;
+  border:7px solid rgba(255,255,255,0.3);
+  border-top:7px solid #00c6ff;
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+  margin:30px auto;
 }
+@keyframes spin{100%{transform:rotate(360deg);}}
 
-.hidden { display: none; }
-
-h1, h2 { text-align: center; }
-
-button {
-  cursor: pointer;
-  border: none;
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:12px;
 }
-
-.option {
-  width: 90%;
-  margin: 12px auto;
-  padding: 18px;
-  border-radius: 50px;
-  font-size: 18px;
-  background: rgba(255,255,255,0.15);
-  color: white;
-  border: 2px solid rgba(255,255,255,0.3);
-}
-
-.option:hover {
-  background: rgba(255,255,255,0.3);
-}
-
-.primary-btn {
-  padding: 14px 25px;
-  font-size: 18px;
-  border-radius: 40px;
-  background: #00c6ff;
-  color: black;
-  display: block;
-  margin: 20px auto;
-}
-
-.loader {
-  width: 60px;
-  height: 60px;
-  border: 7px solid rgba(255,255,255,0.3);
-  border-top: 7px solid #00c6ff;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-  margin: 30px auto;
-}
-
-@keyframes spin {
-  100% { transform: rotate(360deg); }
-}
-
-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-td, th {
-  border: 1px solid rgba(255,255,255,0.3);
-  padding: 8px;
-  font-size: 12px;
+td,th{
+  border:1px solid rgba(255,255,255,0.3);
+  padding:6px;
+  vertical-align:top;
 }
 </style>
 </head>
@@ -104,7 +84,7 @@ td, th {
 <!-- LOADING -->
 <div id="loading" class="hidden">
   <div class="loader"></div>
-  <p style="text-align:center">Analyzing truth patterns…</p>
+  <p id="loadingText" style="text-align:center"></p>
 </div>
 
 <!-- RESULT -->
@@ -119,7 +99,6 @@ td, th {
 <!-- ADMIN -->
 <div id="admin" class="hidden">
   <h2>Creator Portal</h2>
-
   <input id="nick" placeholder="Link nickname" style="width:100%;padding:10px">
   <button class="primary-btn" onclick="createLink()">Create Link</button>
 
@@ -130,6 +109,7 @@ td, th {
         <th>Status</th>
         <th>Link</th>
         <th>Lie%</th>
+        <th>Answers</th>
       </tr>
     </thead>
     <tbody id="adminTable"></tbody>
@@ -139,21 +119,19 @@ td, th {
 </div>
 
 <script>
-// 🔐 CHANGE THIS IF YOU WANT
+/* ===== CONFIG ===== */
 const ADMIN_KEY = "K9xP7Q2LmZ";
+const BASE_URL = window.location.origin + window.location.pathname.replace(/\/$/, "");
 
-// 🔥 FIREBASE CONFIG (YOURS)
+/* ===== FIREBASE ===== */
 firebase.initializeApp({
   apiKey: "AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
   authDomain: "prankgame-6ad46.firebaseapp.com",
   projectId: "prankgame-6ad46",
-  storageBucket: "prankgame-6ad46.appspot.com",
-  messagingSenderId: "446143821762",
-  appId: "1:446143821762:web:707cde496699594811885b"
 });
 const db = firebase.firestore();
 
-// QUESTIONS
+/* ===== QUESTIONS ===== */
 const questions = [
  {q:"Have you ever dreamed about your future?", o:["YES","NO","MAYBE"]},
  {q:"Was this year actually good for you?", o:["YES","NO","NOT SURE"]},
@@ -167,27 +145,25 @@ const questions = [
  {q:"Have you found a better person than admin 😅", o:["No 😵‍💫","Yash 😁"], skip:true}
 ];
 
-let index = 0;
+/* ===== STATE ===== */
+let i = 0;
 let answers = [];
-const url = new URLSearchParams(window.location.search);
-const playId = url.get("play");
-const adminKey = url.get("admin");
+const params = new URLSearchParams(window.location.search);
+const playId = params.get("play");
+const adminKey = params.get("admin");
 
-// ADMIN ACCESS
+/* ===== ADMIN MODE ===== */
 if (adminKey === ADMIN_KEY) {
   document.getElementById("admin").classList.remove("hidden");
   document.getElementById("landing").classList.add("hidden");
   loadAdmin();
 }
 
-// FRIEND ACCESS
-async function startTest() {
-  if (!playId) {
-    alert("Invalid or expired link");
-    return;
-  }
+/* ===== FRIEND MODE ===== */
+async function startTest(){
+  if(!playId) return alert("Invalid or expired link");
   const ref = await db.collection("links").doc(playId).get();
-  if (!ref.exists || ref.data().status === "used") {
+  if(!ref.exists || ref.data().status==="used"){
     alert("This link is already used");
     return;
   }
@@ -195,71 +171,89 @@ async function startTest() {
   showQ();
 }
 
-function showQ() {
-  if (index >= questions.length) return submit();
+function showQ(){
+  if(i>=questions.length){ submit(); return; }
   document.getElementById("questionBox").classList.remove("hidden");
-  document.getElementById("qNo").innerText = `Question ${index+1}`;
-  document.getElementById("qText").innerText = questions[index].q;
-  const box = document.getElementById("options");
-  box.innerHTML = "";
-  questions[index].o.forEach(opt=>{
-    const b = document.createElement("button");
-    b.className = "option";
-    b.innerText = opt;
-    b.onclick = ()=>{answers.push({q:questions[index].q,a:opt,skip:questions[index].skip});index++;showQ();};
-    box.appendChild(b);
+  document.getElementById("qNo").innerText=`Question ${i+1}`;
+  document.getElementById("qText").innerText=questions[i].q;
+  const opt=document.getElementById("options");
+  opt.innerHTML="";
+  questions[i].o.forEach(v=>{
+    const b=document.createElement("button");
+    b.className="option";
+    b.innerText=v;
+    b.onclick=()=>{answers.push({q:questions[i].q,a:v});i++;showQ();};
+    opt.appendChild(b);
   });
 }
 
-function submit() {
+/* ===== SUBMIT ===== */
+function submit(){
   document.getElementById("questionBox").classList.add("hidden");
   document.getElementById("loading").classList.remove("hidden");
 
-  setTimeout(async ()=>{
-    const lie = Math.floor(Math.random()*20)+76;
-    await db.collection("links").doc(playId).update({
-      status:"used",
-      answers,
-      lie
-    });
+  const steps=[
+    "Calculating honesty level…",
+    "Analyzing personality traits…",
+    "Processing vibe check…"
+  ];
+  let s=0;
+  document.getElementById("loadingText").innerText=steps[0];
+  const interval=setInterval(()=>{
+    s++; if(s<steps.length) document.getElementById("loadingText").innerText=steps[s];
+  },1200);
 
+  const lie=Math.floor(Math.random()*20)+76;
+
+  setTimeout(()=>{
+    clearInterval(interval);
     document.getElementById("loading").classList.add("hidden");
     document.getElementById("result").classList.remove("hidden");
-    document.getElementById("lie").innerText = "Lie Probability: "+lie+"%";
-    document.getElementById("fun").innerText = "Your honesty fluctuated suspiciously 😏";
-    document.getElementById("personality").innerText = "Personality: Silent Thinker 🧠";
-    document.getElementById("vibe").innerText = "Vibe: Calm but unpredictable";
-  },3000);
+    document.getElementById("lie").innerText="Lie Probability: "+lie+"%";
+    document.getElementById("fun").innerText="Truth detected… but not completely 😏";
+    document.getElementById("personality").innerText="Personality: Silent Thinker 🧠";
+    document.getElementById("vibe").innerText="Vibe: Calm but unpredictable";
+  },3800);
+
+  db.collection("links").doc(playId).update({
+    status:"used",
+    lie,
+    answers,
+    finishedAt:Date.now()
+  });
 }
 
-// ADMIN FUNCTIONS
-function createLink() {
-  const nick = document.getElementById("nick").value.trim();
-  if (!nick) return alert("Enter nickname");
-  const id = "L"+Date.now();
+/* ===== ADMIN ===== */
+function createLink(){
+  const nick=document.getElementById("nick").value.trim();
+  if(!nick) return alert("Enter nickname");
+  const id="L"+Date.now();
   db.collection("links").doc(id).set({
     nickname:nick,
     status:"unused",
     created:Date.now()
   }).then(()=>{
-    navigator.clipboard.writeText(location.origin+"?play="+id);
+    navigator.clipboard.writeText(BASE_URL+"?play="+id);
     alert("Link copied!");
     loadAdmin();
   });
 }
 
-function loadAdmin() {
+function loadAdmin(){
   db.collection("links").orderBy("created","desc").onSnapshot(snap=>{
-    const t = document.getElementById("adminTable");
+    const t=document.getElementById("adminTable");
     t.innerHTML="";
     snap.forEach(d=>{
       const x=d.data();
-      t.innerHTML+=`<tr>
-        <td>${x.nickname||""}</td>
-        <td>${x.status}</td>
-        <td>${location.origin}?play=${d.id}</td>
-        <td>${x.lie||"-"}</td>
-      </tr>`;
+      const ans=(x.answers||[]).map(a=>`• ${a.q} → ${a.a}`).join("<br>");
+      t.innerHTML+=`
+        <tr>
+          <td>${x.nickname||""}</td>
+          <td>${x.status}</td>
+          <td>${BASE_URL}?play=${d.id}</td>
+          <td>${x.lie||"-"}</td>
+          <td>${ans||"-"}</td>
+        </tr>`;
     });
   });
 }
