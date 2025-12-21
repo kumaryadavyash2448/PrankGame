@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Neural Truth Scanner</title>
+<title>Truth & Personality Scanner</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
 
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -12,61 +12,39 @@
 body{
   margin:0;
   font-family:system-ui,Arial;
-  background:#05060a;
-  color:#e8faff;
+  background:#0b0f1a;
+  color:#eafcff;
 }
 .hidden{display:none}
-:root{
-  --neon:#00f7ff;
-  --pink:#ff3cac;
-}
+.container{max-width:700px;margin:auto;padding:20px}
 .btn{
-  padding:15px 30px;
+  padding:14px 28px;
   border:none;
   border-radius:40px;
-  background:linear-gradient(135deg,var(--neon),var(--pink));
+  background:linear-gradient(135deg,#00f7ff,#ff3cac);
   font-weight:700;
   cursor:pointer;
-}
-.glass{
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.15);
-  border-radius:20px;
-  padding:20px;
-  box-shadow:0 0 25px rgba(0,247,255,.2);
 }
 .option{
   width:100%;
   margin:10px 0;
   padding:16px;
   border-radius:40px;
-  background:rgba(0,247,255,.12);
   border:1px solid rgba(0,247,255,.4);
+  background:rgba(0,247,255,.12);
   color:white;
   cursor:pointer;
 }
-.option:hover{background:rgba(255,60,172,.3)}
+.option:hover{background:rgba(255,60,172,.25)}
 .progress{height:8px;background:#111;border-radius:10px;overflow:hidden}
-.progress div{height:100%;background:linear-gradient(90deg,var(--neon),var(--pink));width:0%}
-.spinner{
-  width:70px;height:70px;
-  border:6px solid #222;
-  border-top:6px solid var(--neon);
-  border-radius:50%;
-  animation:spin 1s linear infinite;
-  margin:auto;
-}
-@keyframes spin{100%{transform:rotate(360deg)}}
-.flash{
-  position:fixed;inset:0;background:white;opacity:.9;display:none;z-index:999;
-}
+.progress div{height:100%;width:0%;background:linear-gradient(90deg,#00f7ff,#ff3cac)}
 .card{
   padding:14px;
   border-bottom:1px solid #222;
   cursor:pointer;
 }
-.card:hover{background:#0e1630}
-.active{box-shadow:inset 4px 0 var(--neon)}
+.card:hover{background:#121a33}
+.active{box-shadow:inset 4px 0 #00f7ff}
 .danger{
   background:#ff4d4d;
   border:none;
@@ -79,53 +57,51 @@ body{
 </head>
 <body>
 
-<div id="start" class="glass" style="min-height:100vh;display:flex;align-items:center;justify-content:center;text-align:center">
-  <div>
-    <h1 style="color:var(--neon)">Neural Truth Scanner 🧠</h1>
-    <p>AI personality & honesty detection</p>
-    <button class="btn" onclick="init()">Start</button>
-  </div>
+<div class="container">
+
+<!-- START -->
+<div id="start">
+  <h1>Truth & Personality Scanner 🔮</h1>
+  <p>Answer honestly. Or try to.</p>
+  <button class="btn" onclick="startGame()">Start</button>
 </div>
 
-<div id="quiz" class="hidden glass" style="max-width:700px;margin:auto">
+<!-- QUIZ -->
+<div id="quiz" class="hidden">
   <h3 id="qNo"></h3>
   <p id="qText"></p>
   <div id="options"></div>
   <div class="progress"><div id="prog"></div></div>
 </div>
 
-<div id="loader" class="hidden glass" style="text-align:center">
-  <div class="spinner"></div>
-  <p id="loadText">Initializing scan…</p>
+<!-- LOADER -->
+<div id="loader" class="hidden">
+  <h3 id="loadText">Analyzing responses…</h3>
 </div>
 
-<div id="result" class="hidden glass">
-  <h2>Scan Complete</h2>
-  <p id="lieText"></p>
-  <p id="perText"></p>
-  <p id="vibeText"></p>
-  <button class="btn" onclick="cameraPrank()">Analyze Facial Expressions 😏</button>
+<!-- RESULT -->
+<div id="result" class="hidden">
+  <h2>Result</h2>
+  <p id="lie"></p>
+  <p id="personality"></p>
+  <p id="vibe"></p>
 </div>
 
-<div id="camera" class="hidden glass">
-  <video id="video" autoplay playsinline></video>
-  <p id="camMsg"></p>
-  <button class="btn hidden" id="closeCam" onclick="closeCamera()">Close</button>
-</div>
-
-<div id="admin" class="hidden" style="display:flex;height:100vh">
-  <div style="width:35%;border-right:1px solid #222" id="left"></div>
-  <div style="flex:1;padding:20px">
-    <h2>Creator Portal</h2>
+<!-- ADMIN -->
+<div id="admin" class="hidden" style="display:flex;gap:20px">
+  <div style="width:35%" id="left"></div>
+  <div style="flex:1">
+    <h2>Admin Portal</h2>
     <button class="btn" onclick="createLink()">Create New Link</button>
     <p id="newLink"></p>
     <div id="details">Select a response</div>
   </div>
 </div>
 
-<div class="flash" id="flash"></div>
+</div>
 
 <script>
+/* FIREBASE */
 firebase.initializeApp({
   apiKey:"AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
   authDomain:"prankgame-6ad46.firebaseapp.com",
@@ -133,46 +109,58 @@ firebase.initializeApp({
 });
 const db=firebase.firestore();
 
+/* MODE */
 const ADMIN_KEY="K9xP7Q2LmZ";
-const Q=[
-"Have you smiled at your phone and locked it fast?",
-"Do you overthink at night?",
-"Have you said 'I'm fine' when not?",
-"Do you replay conversations?",
-"Have you hidden feelings?",
-"Do you get insecure around friends?",
-"Does your brain wake up at 2AM?",
-"Do people know real you?",
+const params=new URLSearchParams(location.search);
+const play=params.get("play");
+const admin=params.get("admin");
+
+/* DATA */
+const QUESTIONS=[
+"Have you ever smiled at your phone and locked it quickly?",
+"Do you overthink conversations at night?",
+"Have you said 'I'm fine' when you weren't?",
+"Do you replay moments that already passed?",
+"Have you hidden feelings when asked directly?",
+"Have you felt insecure around a friend?",
+"Does your mind wake up at 2AM?",
+"Do people really know the real you?",
 "Have you pretended not to care?",
-"Is admin better than everyone? 😅"
+"Is admin the best person you know? 😅"
 ];
 
-let idx=0,answers=[];
-const p=new URLSearchParams(location.search);
-const play=p.get("play");
-const admin=p.get("admin");
+let index=0;
+let answers=[];
 
-function init(){
-  if(admin===ADMIN_KEY){showAdmin();return;}
-  if(!play){alert("Invalid link");return;}
+/* INIT */
+if(admin===ADMIN_KEY){
+  showAdmin();
+}else if(play){
+  start.style.display="block";
+}else{
+  start.innerHTML="<h2>Invalid or expired link</h2>";
+}
+
+/* PLAYER FLOW */
+function startGame(){
   start.classList.add("hidden");
   quiz.classList.remove("hidden");
   showQ();
 }
 
 function showQ(){
-  if(idx>=Q.length){submit();return;}
-  qNo.innerText=`Question ${idx+1}/${Q.length}`;
-  qText.innerText=Q[idx];
+  if(index>=QUESTIONS.length){submit();return;}
+  qNo.innerText=`Question ${index+1}/${QUESTIONS.length}`;
+  qText.innerText=QUESTIONS[index];
   options.innerHTML="";
   ["YES","NO","MAYBE"].forEach(o=>{
-    let b=document.createElement("button");
+    const b=document.createElement("button");
     b.className="option";
     b.innerText=o;
     b.onclick=()=>{
-      answers.push({q:Q[idx],a:o});
-      idx++;
-      prog.style.width=(idx/Q.length*100)+"%";
+      answers.push({q:QUESTIONS[index],a:o});
+      index++;
+      prog.style.width=(index/QUESTIONS.length*100)+"%";
       showQ();
     };
     options.appendChild(b);
@@ -182,60 +170,43 @@ function showQ(){
 function submit(){
   quiz.classList.add("hidden");
   loader.classList.remove("hidden");
-  const steps=["Analyzing honesty…","Scanning personality…","Detecting lies…","Finalizing…"];
+  const steps=[
+    "Analyzing honesty…",
+    "Scanning personality…",
+    "Detecting lies…",
+    "Finalizing report…"
+  ];
   let s=0;
   const t=setInterval(()=>{
     loadText.innerText=steps[s++]||"Done";
-    if(s>steps.length){clearInterval(t);finish();}
+    if(s>steps.length){
+      clearInterval(t);
+      finish();
+    }
   },1200);
 }
 
 function finish(){
   loader.classList.add("hidden");
   result.classList.remove("hidden");
-  const lie=Math.floor(Math.random()*20)+76;
-  lieText.innerText=`Lie Probability: ${lie}%`;
-  perText.innerText="Personality: Overthinking Strategist 🧠";
-  vibeText.innerText="Vibe: Calm outside, chaos inside 😌";
+  const lieVal=Math.floor(Math.random()*20)+76;
+  lie.innerText=`Lie Probability: ${lieVal}%`;
+  personality.innerText="Personality: Overthinking Strategist 🧠";
+  vibe.innerText="Vibe: Calm outside, chaos inside 😌";
 
   db.collection("links").doc(play).update({
     status:"used",
     answers,
-    lie,
+    lie:lieVal,
     time:Date.now()
   });
 }
 
-function cameraPrank(){
-  result.classList.add("hidden");
-  camera.classList.remove("hidden");
-  navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-  .then(s=>{
-    video.srcObject=s;
-    shutter(0);
-  });
-}
-
-function shutter(n){
-  if(n>=3){
-    camMsg.innerText="Relax 😂 No photo was taken. Just a prank.";
-    closeCam.classList.remove("hidden");
-    return;
-  }
-  flash.style.display="block";
-  new Audio("https://www.soundjay.com/camera/camera-shutter-click-03.mp3").play();
-  setTimeout(()=>flash.style.display="none",200);
-  setTimeout(()=>shutter(n+1),700);
-}
-
-function closeCamera(){
-  camera.classList.add("hidden");
-  result.classList.remove("hidden");
-}
-
+/* ADMIN */
 function showAdmin(){
   start.classList.add("hidden");
   admin.classList.remove("hidden");
+
   db.collection("links").orderBy("time","desc").onSnapshot(s=>{
     left.innerHTML="";
     s.forEach(d=>{
@@ -252,10 +223,10 @@ function createLink(){
   const id="PL_"+Date.now();
   db.collection("links").doc(id).set({
     status:"unused",
-    createdAt:Date.now()
+    created:Date.now()
+  }).then(()=>{
+    newLink.innerHTML=`Play link:<br><code>${location.origin+location.pathname}?play=${id}</code>`;
   });
-  newLink.innerHTML=`Play Link:<br>
-  <code>${location.origin+location.pathname}?play=${id}</code>`;
 }
 
 function showDetails(id,data,card){
@@ -269,7 +240,7 @@ function showDetails(id,data,card){
 }
 
 function del(id){
-  if(confirm("Delete permanently?")){
+  if(confirm("Delete response?")){
     db.collection("links").doc(id).delete();
     details.innerText="Deleted ✔";
   }
