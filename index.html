@@ -22,14 +22,14 @@ body{
   --pink:#ff3cac;
 }
 .btn{
-  padding:16px 30px;
+  padding:14px 28px;
   border-radius:40px;
   border:none;
   background:linear-gradient(135deg,var(--neon),var(--pink));
   color:black;
-  font-size:18px;
-  cursor:pointer;
+  font-size:16px;
   font-weight:700;
+  cursor:pointer;
 }
 .glass{
   background:rgba(255,255,255,.06);
@@ -37,62 +37,73 @@ body{
   border:1px solid rgba(255,255,255,.15);
   border-radius:20px;
   padding:20px;
+  box-shadow:0 0 25px rgba(0,247,255,.12);
 }
 .option{
   width:100%;
-  margin:12px 0;
-  padding:18px;
+  margin:10px 0;
+  padding:16px;
   border-radius:50px;
   background:rgba(0,247,255,.08);
   color:white;
   border:1px solid rgba(0,247,255,.3);
-  font-size:18px;
+  font-size:17px;
+  cursor:pointer;
 }
+.option:hover{background:rgba(255,60,172,.25)}
 .progress{height:8px;background:#111;border-radius:10px;overflow:hidden}
 .progress div{height:100%;background:linear-gradient(90deg,var(--neon),var(--pink));width:0%}
 .spinner{
-  width:60px;height:60px;border:6px solid #222;border-top:6px solid var(--neon);
-  border-radius:50%;animation:spin 1s linear infinite;margin:auto
+  width:60px;height:60px;border:6px solid #222;
+  border-top:6px solid var(--neon);
+  border-radius:50%;
+  animation:spin 1s linear infinite;
+  margin:auto
 }
 @keyframes spin{100%{transform:rotate(360deg)}}
+.flash{position:fixed;inset:0;background:white;opacity:.9;display:none;z-index:999}
+
+/* ADMIN */
 #admin{display:flex;height:100vh}
 #left{width:35%;border-right:1px solid #222;overflow:auto}
 #right{flex:1;padding:20px}
-.card{padding:15px;border-bottom:1px solid #222;cursor:pointer}
+.card{padding:14px;border-bottom:1px solid #222;cursor:pointer}
 .card:hover{background:#0e1630}
 .card.active{background:#0e1630;box-shadow:inset 4px 0 var(--neon)}
 .badge{font-size:12px;color:var(--neon)}
 .danger{
   background:linear-gradient(135deg,#ff0844,#ffb199);
-  border:none;padding:12px 20px;border-radius:30px;font-weight:700
+  border:none;padding:12px 20px;border-radius:30px;
+  font-weight:700;cursor:pointer
 }
-.flash{position:fixed;inset:0;background:white;opacity:.9;display:none;z-index:999}
 </style>
 </head>
 
 <body>
 
-<div id="start">
-  <div class="glass" style="text-align:center">
-    <h1>Neural Truth Scanner 🧠</h1>
-    <p>AI-based honesty & personality scan</p>
-    <button class="btn" onclick="init()">Start Scan</button>
-  </div>
+<!-- USER START -->
+<div id="start" class="glass" style="margin:60px auto;max-width:400px;text-align:center">
+  <h1>Neural Truth Scanner 🧠</h1>
+  <p>AI based honesty & personality scan</p>
+  <button class="btn" onclick="startQuiz()">Start Scan</button>
 </div>
 
-<div id="quiz" class="hidden glass">
+<!-- QUIZ -->
+<div id="quiz" class="hidden glass" style="max-width:600px;margin:40px auto">
   <h2 id="qNo"></h2>
   <p id="qText"></p>
   <div id="options"></div>
   <div class="progress"><div id="prog"></div></div>
 </div>
 
-<div id="loader" class="hidden glass" style="text-align:center">
+<!-- LOADER -->
+<div id="loader" class="hidden glass" style="max-width:400px;margin:60px auto;text-align:center">
   <div class="spinner"></div>
   <p id="loadText">Initializing scan…</p>
 </div>
 
-<div id="result" class="hidden glass">
+<!-- RESULT -->
+<div id="result" class="hidden glass" style="max-width:500px;margin:60px auto;text-align:center">
   <h2>Scan Complete</h2>
   <p id="lie"></p>
   <p id="per"></p>
@@ -100,20 +111,21 @@ body{
   <button class="btn" onclick="cameraPrank()">Analyze Face 😏</button>
 </div>
 
-<div id="camera" class="hidden glass">
-  <video id="video" autoplay playsinline></video>
+<!-- CAMERA -->
+<div id="camera" class="hidden glass" style="max-width:500px;margin:60px auto;text-align:center">
+  <video id="video" autoplay playsinline style="width:100%;border-radius:16px"></video>
   <p id="camMsg"></p>
-  <button class="btn hidden" id="closeCam" onclick="endCamera()">Close</button>
+  <button id="closeCam" class="btn hidden" onclick="closeCamera()">Close</button>
 </div>
 
-<div class="flash" id="flash"></div>
+<div id="flash" class="flash"></div>
 
 <!-- ADMIN -->
 <div id="admin" class="hidden">
   <div id="left"></div>
   <div id="right">
     <div class="glass">
-      <h3>Create New Link 😈</h3>
+      <h2>Create New Prank Link 😈</h2>
       <input id="nick" placeholder="Nickname"
         style="width:100%;padding:12px;border-radius:12px;border:none">
       <br><br>
@@ -133,6 +145,7 @@ firebase.initializeApp({
 });
 const db=firebase.firestore();
 
+/* QUESTIONS */
 const Q=[
 "Have you smiled at your phone secretly?",
 "Do you overthink at night?",
@@ -151,8 +164,14 @@ const params=new URLSearchParams(location.search);
 const play=params.get("play");
 const adminKey=params.get("admin");
 
-function init(){
-  if(adminKey){showAdmin();return;}
+/* AUTO MODE */
+window.onload=()=>{
+  if(adminKey){openAdmin();return;}
+  if(!play){return;}
+};
+
+/* USER FLOW */
+function startQuiz(){
   if(!play){alert("Invalid or expired link");return;}
   start.classList.add("hidden");
   quiz.classList.remove("hidden");
@@ -168,7 +187,11 @@ function showQ(){
     const b=document.createElement("button");
     b.className="option";
     b.innerText=o;
-    b.onclick=()=>{answers.push({q:Q[i],a:o});i++;prog.style.width=(i/10*100)+"%";showQ();}
+    b.onclick=()=>{
+      answers.push({q:Q[i],a:o});
+      i++;prog.style.width=(i/10*100)+"%";
+      showQ();
+    };
     options.appendChild(b);
   });
 }
@@ -181,7 +204,7 @@ function submit(){
   const t=setInterval(()=>{
     loadText.innerText=steps[s++]||"Done";
     if(s>steps.length){clearInterval(t);finish();}
-  },1000);
+  },900);
 }
 
 function finish(){
@@ -191,16 +214,18 @@ function finish(){
   lie.innerText=`Lie Probability: ${lieP}%`;
   per.innerText="Personality: Overthinking Strategist 🧠";
   vibe.innerText="Vibe: Calm outside, chaos inside 😌";
-  db.collection("links").doc(play).update({status:"used",answers,lie:lieP,time:Date.now()});
+  db.collection("links").doc(play).update({
+    status:"used",answers,lie:lieP,time:Date.now()
+  });
 }
 
+/* CAMERA PRANK */
 function cameraPrank(){
   result.classList.add("hidden");
   camera.classList.remove("hidden");
   navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-  .then(s=>{video.srcObject=s;flashLoop(0);});
+    .then(s=>{video.srcObject=s;flashLoop(0);});
 }
-
 function flashLoop(n){
   if(n>=3){
     camMsg.innerText="Relax 😌 No photo taken. Just a prank 😂";
@@ -210,14 +235,13 @@ function flashLoop(n){
   setTimeout(()=>flash.style.display="none",200);
   setTimeout(()=>flashLoop(n+1),600);
 }
-
-function endCamera(){
+function closeCamera(){
   camera.classList.add("hidden");
   result.classList.remove("hidden");
 }
 
-/* ADMIN */
-function showAdmin(){
+/* ADMIN FLOW */
+function openAdmin(){
   start.classList.add("hidden");
   admin.classList.remove("hidden");
   db.collection("links").orderBy("time","desc").onSnapshot(s=>{
@@ -225,7 +249,8 @@ function showAdmin(){
     s.forEach(d=>{
       const c=document.createElement("div");
       c.className="card";
-      c.innerHTML=`<b>${d.data().nickname||"Unnamed"}</b><br><span class="badge">${d.data().status}</span>`;
+      c.innerHTML=`<b>${d.data().nickname||"Unnamed"}</b><br>
+        <span class="badge">${d.data().status}</span>`;
       c.onclick=()=>select(d.id,d.data(),c);
       left.appendChild(c);
     });
@@ -235,12 +260,14 @@ function showAdmin(){
 function select(id,d,card){
   document.querySelectorAll(".card").forEach(x=>x.classList.remove("active"));
   card.classList.add("active");
-  details.innerHTML=`<p><b>Lie:</b> ${d.lie||"-"}%</p>
-  <p>${(d.answers||[]).map(a=>a.q+" → "+a.a).join("<br>")}</p>
-  <button class="danger" onclick="deleteEntry('${id}')">Delete</button>`;
+  details.innerHTML=`
+    <p><b>Lie:</b> ${d.lie||"-"}%</p>
+    <p>${(d.answers||[]).map(a=>a.q+" → "+a.a).join("<br>")}</p>
+    <button class="danger" onclick="del('${id}')">Delete</button>
+  `;
 }
 
-function deleteEntry(id){
+function del(id){
   if(confirm("Delete permanently?")){
     db.collection("links").doc(id).delete();
     details.innerHTML="Deleted ✔️";
@@ -251,10 +278,16 @@ function createLink(){
   const nick=document.getElementById("nick").value.trim();
   if(!nick){alert("Enter nickname");return;}
   const id="L"+Date.now();
-  db.collection("links").doc(id).set({nickname:nick,status:"unused",time:Date.now()});
+  db.collection("links").doc(id).set({
+    nickname:nick,status:"unused",time:Date.now()
+  });
   const link=location.origin+location.pathname+"?play="+id;
-  newLink.innerHTML=`<a href="${link}" target="_blank">${link}</a><br>
-  <button class="btn" onclick="navigator.clipboard.writeText('${link}')">Copy</button>`;
+  newLink.innerHTML=`
+    <a href="${link}" target="_blank">${link}</a><br><br>
+    <button class="btn" onclick="navigator.clipboard.writeText('${link}')">
+      Copy Link
+    </button>
+  `;
 }
 </script>
 </body>
