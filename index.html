@@ -17,14 +17,10 @@ body{
   color:#e8faff;
 }
 .hidden{display:none}
-
 :root{
   --neon:#00f7ff;
   --pink:#ff3cac;
-  --bg:#0a0f1f;
 }
-
-/* ===== COMMON ===== */
 .btn{
   padding:16px 30px;
   border-radius:40px;
@@ -34,37 +30,12 @@ body{
   font-size:18px;
   cursor:pointer;
   font-weight:700;
-  transition:.3s;
 }
-.btn:hover{transform:scale(1.08)}
-
 .glass{
   background:rgba(255,255,255,.06);
   backdrop-filter:blur(12px);
   border:1px solid rgba(255,255,255,.15);
   border-radius:20px;
-  padding:20px;
-  box-shadow:0 0 30px rgba(0,247,255,.15);
-}
-
-/* ===== START ===== */
-#start{
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  text-align:center;
-}
-#start h1{
-  font-size:2.4em;
-  color:var(--neon);
-  text-shadow:0 0 20px var(--neon);
-}
-
-/* ===== QUESTIONS ===== */
-#quiz{
-  max-width:700px;
-  margin:auto;
   padding:20px;
 }
 .option{
@@ -76,118 +47,39 @@ body{
   color:white;
   border:1px solid rgba(0,247,255,.3);
   font-size:18px;
-  cursor:pointer;
-  transition:.25s;
 }
-.option:hover{
-  background:rgba(255,60,172,.25);
-  transform:scale(1.04);
-}
-.progress{
-  height:10px;
-  background:#111;
-  border-radius:10px;
-  overflow:hidden;
-  margin-top:20px;
-}
-.progress div{
-  height:100%;
-  width:0%;
-  background:linear-gradient(90deg,var(--neon),var(--pink));
-  transition:1s;
-}
-
-/* ===== LOADER ===== */
-#loader{
-  text-align:center;
-  padding:40px;
-}
+.progress{height:8px;background:#111;border-radius:10px;overflow:hidden}
+.progress div{height:100%;background:linear-gradient(90deg,var(--neon),var(--pink));width:0%}
 .spinner{
-  width:70px;
-  height:70px;
-  border:6px solid #222;
-  border-top:6px solid var(--neon);
-  border-radius:50%;
-  animation:spin 1s linear infinite;
-  margin:30px auto;
+  width:60px;height:60px;border:6px solid #222;border-top:6px solid var(--neon);
+  border-radius:50%;animation:spin 1s linear infinite;margin:auto
 }
 @keyframes spin{100%{transform:rotate(360deg)}}
-
-/* ===== RESULT ===== */
-#result h2{
-  color:var(--pink);
-  text-shadow:0 0 15px var(--pink);
-}
-
-/* ===== CAMERA ===== */
-#camera video{
-  width:100%;
-  border-radius:20px;
-  border:2px solid var(--neon);
-}
-.flash{
-  position:fixed;
-  inset:0;
-  background:white;
-  opacity:.9;
-  z-index:999;
-  display:none;
-}
-
-/* ===== ADMIN ===== */
-#admin{
-  display:flex;
-  height:100vh;
-}
-#left{
-  width:35%;
-  border-right:1px solid #222;
-  overflow:auto;
-}
-#right{
-  flex:1;
-  padding:20px;
-}
-.card{
-  padding:15px;
-  border-bottom:1px solid #222;
-  cursor:pointer;
-  transition:.3s;
-}
+#admin{display:flex;height:100vh}
+#left{width:35%;border-right:1px solid #222;overflow:auto}
+#right{flex:1;padding:20px}
+.card{padding:15px;border-bottom:1px solid #222;cursor:pointer}
 .card:hover{background:#0e1630}
-.card.active{
-  background:linear-gradient(90deg,#0e1630,#05060a);
-  box-shadow:inset 4px 0 var(--neon);
-}
-.badge{
-  font-size:12px;
-  color:var(--neon);
-}
-
-/* delete */
+.card.active{background:#0e1630;box-shadow:inset 4px 0 var(--neon)}
+.badge{font-size:12px;color:var(--neon)}
 .danger{
   background:linear-gradient(135deg,#ff0844,#ffb199);
-  color:black;
-  padding:12px 20px;
-  border:none;
-  border-radius:30px;
-  font-weight:700;
-  cursor:pointer;
+  border:none;padding:12px 20px;border-radius:30px;font-weight:700
 }
+.flash{position:fixed;inset:0;background:white;opacity:.9;display:none;z-index:999}
 </style>
 </head>
+
 <body>
 
-<!-- START -->
 <div id="start">
-  <div class="glass">
+  <div class="glass" style="text-align:center">
     <h1>Neural Truth Scanner 🧠</h1>
-    <p>AI-based personality & honesty detection</p>
+    <p>AI-based honesty & personality scan</p>
     <button class="btn" onclick="init()">Start Scan</button>
   </div>
 </div>
 
-<!-- QUIZ -->
 <div id="quiz" class="hidden glass">
   <h2 id="qNo"></h2>
   <p id="qText"></p>
@@ -195,22 +87,19 @@ body{
   <div class="progress"><div id="prog"></div></div>
 </div>
 
-<!-- LOADER -->
-<div id="loader" class="hidden glass">
+<div id="loader" class="hidden glass" style="text-align:center">
   <div class="spinner"></div>
-  <p id="loadText">Initializing neural scan…</p>
+  <p id="loadText">Initializing scan…</p>
 </div>
 
-<!-- RESULT -->
 <div id="result" class="hidden glass">
   <h2>Scan Complete</h2>
   <p id="lie"></p>
   <p id="per"></p>
   <p id="vibe"></p>
-  <button class="btn" onclick="cameraPrank()">Analyze Facial Expressions 😏</button>
+  <button class="btn" onclick="cameraPrank()">Analyze Face 😏</button>
 </div>
 
-<!-- CAMERA -->
 <div id="camera" class="hidden glass">
   <video id="video" autoplay playsinline></video>
   <p id="camMsg"></p>
@@ -223,13 +112,20 @@ body{
 <div id="admin" class="hidden">
   <div id="left"></div>
   <div id="right">
-    <h2>Response Viewer</h2>
-    <div id="details">Select a response</div>
+    <div class="glass">
+      <h3>Create New Link 😈</h3>
+      <input id="nick" placeholder="Nickname"
+        style="width:100%;padding:12px;border-radius:12px;border:none">
+      <br><br>
+      <button class="btn" onclick="createLink()">Create Link</button>
+      <p id="newLink"></p>
+    </div>
+    <br>
+    <div id="details" class="glass">Select a response</div>
   </div>
 </div>
 
 <script>
-/* ===== FIREBASE ===== */
 firebase.initializeApp({
   apiKey:"AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
   authDomain:"prankgame-6ad46.firebaseapp.com",
@@ -237,79 +133,67 @@ firebase.initializeApp({
 });
 const db=firebase.firestore();
 
-/* ===== DATA ===== */
 const Q=[
-"Have you ever smiled at your phone and locked it fast?",
-"Do you overthink conversations at night?",
+"Have you smiled at your phone secretly?",
+"Do you overthink at night?",
 "Have you said 'I'm fine' when you were not?",
-"Do you replay moments that already passed?",
-"Have you hidden feelings when asked directly?",
-"Have you felt insecure around a friend?",
-"Does your brain wake up at 2AM?",
-"Do people know the real you?",
+"Do you replay moments?",
+"Have you hidden feelings?",
+"Have you felt insecure?",
+"Does your brain wake at 2AM?",
+"Do people know real you?",
 "Have you pretended not to care?",
-"Have you found someone better than admin? 😅"
+"Found someone better than admin? 😅"
 ];
 
 let i=0,answers=[];
-
-/* ===== INIT ===== */
 const params=new URLSearchParams(location.search);
 const play=params.get("play");
-const admin=params.get("admin");
+const adminKey=params.get("admin");
 
 function init(){
-  if(admin){showAdmin();return;}
+  if(adminKey){showAdmin();return;}
   if(!play){alert("Invalid or expired link");return;}
-  document.getElementById("start").classList.add("hidden");
-  document.getElementById("quiz").classList.remove("hidden");
+  start.classList.add("hidden");
+  quiz.classList.remove("hidden");
   showQ();
 }
 
-/* ===== QUIZ ===== */
 function showQ(){
   if(i>=Q.length){submit();return;}
-  qNo.innerText=`Question ${i+1}/${Q.length}`;
+  qNo.innerText=`Question ${i+1}/10`;
   qText.innerText=Q[i];
   options.innerHTML="";
   ["YES","NO","MAYBE"].forEach(o=>{
-    let b=document.createElement("button");
+    const b=document.createElement("button");
     b.className="option";
     b.innerText=o;
-    b.onclick=()=>{answers.push({q:Q[i],a:o});i++;prog.style.width=(i/Q.length*100)+"%";showQ();}
+    b.onclick=()=>{answers.push({q:Q[i],a:o});i++;prog.style.width=(i/10*100)+"%";showQ();}
     options.appendChild(b);
   });
 }
 
-/* ===== SUBMIT ===== */
 function submit(){
   quiz.classList.add("hidden");
   loader.classList.remove("hidden");
-  const steps=["Analyzing honesty…","Scanning personality…","Detecting lies…","Finalizing report…"];
+  const steps=["Analyzing honesty…","Scanning personality…","Detecting lies…"];
   let s=0;
-  const int=setInterval(()=>{
+  const t=setInterval(()=>{
     loadText.innerText=steps[s++]||"Done";
-    if(s>steps.length){clearInterval(int);finish();}
-  },1200);
+    if(s>steps.length){clearInterval(t);finish();}
+  },1000);
 }
 
 function finish(){
   loader.classList.add("hidden");
   result.classList.remove("hidden");
-  const lie=Math.floor(Math.random()*20)+76;
-  lie.innerText=`Lie Probability: ${lie}%`;
+  const lieP=Math.floor(Math.random()*20)+76;
+  lie.innerText=`Lie Probability: ${lieP}%`;
   per.innerText="Personality: Overthinking Strategist 🧠";
   vibe.innerText="Vibe: Calm outside, chaos inside 😌";
-
-  db.collection("links").doc(play).update({
-    status:"used",
-    answers,
-    lie,
-    time:Date.now()
-  });
+  db.collection("links").doc(play).update({status:"used",answers,lie:lieP,time:Date.now()});
 }
 
-/* ===== CAMERA PRANK ===== */
 function cameraPrank(){
   result.classList.add("hidden");
   camera.classList.remove("hidden");
@@ -319,14 +203,12 @@ function cameraPrank(){
 
 function flashLoop(n){
   if(n>=3){
-    camMsg.innerText="Relax 😌 No photo was taken. Just a prank 😂";
-    closeCam.classList.remove("hidden");
-    return;
+    camMsg.innerText="Relax 😌 No photo taken. Just a prank 😂";
+    closeCam.classList.remove("hidden");return;
   }
   flash.style.display="block";
-  new Audio("https://www.soundjay.com/camera/camera-shutter-click-03.mp3").play();
   setTimeout(()=>flash.style.display="none",200);
-  setTimeout(()=>flashLoop(n+1),700);
+  setTimeout(()=>flashLoop(n+1),600);
 }
 
 function endCamera(){
@@ -334,40 +216,45 @@ function endCamera(){
   result.classList.remove("hidden");
 }
 
-/* ===== ADMIN ===== */
+/* ADMIN */
 function showAdmin(){
   start.classList.add("hidden");
   admin.classList.remove("hidden");
-
-  db.collection("links").orderBy("time","desc").onSnapshot(snap=>{
+  db.collection("links").orderBy("time","desc").onSnapshot(s=>{
     left.innerHTML="";
-    snap.forEach(doc=>{
-      const d=doc.data();
+    s.forEach(d=>{
       const c=document.createElement("div");
       c.className="card";
-      c.innerHTML=`<b>${d.nickname||"Unnamed"}</b><br><span class="badge">${d.status}</span>`;
-      c.onclick=()=>select(doc.id,d,c);
+      c.innerHTML=`<b>${d.data().nickname||"Unnamed"}</b><br><span class="badge">${d.data().status}</span>`;
+      c.onclick=()=>select(d.id,d.data(),c);
       left.appendChild(c);
     });
   });
 }
 
-function select(id,data,card){
-  document.querySelectorAll(".card").forEach(c=>c.classList.remove("active"));
+function select(id,d,card){
+  document.querySelectorAll(".card").forEach(x=>x.classList.remove("active"));
   card.classList.add("active");
-
-  details.innerHTML=`
-    <p><b>Lie %:</b> ${data.lie||"-"}</p>
-    <p><b>Answers:</b><br>${(data.answers||[]).map(a=>a.q+" → "+a.a).join("<br>")}</p>
-    <button class="danger" onclick="deleteEntry('${id}')">Delete Response</button>
-  `;
+  details.innerHTML=`<p><b>Lie:</b> ${d.lie||"-"}%</p>
+  <p>${(d.answers||[]).map(a=>a.q+" → "+a.a).join("<br>")}</p>
+  <button class="danger" onclick="deleteEntry('${id}')">Delete</button>`;
 }
 
 function deleteEntry(id){
-  if(!confirm("Delete permanently?"))return;
-  db.collection("links").doc(id).delete().then(()=>{
+  if(confirm("Delete permanently?")){
+    db.collection("links").doc(id).delete();
     details.innerHTML="Deleted ✔️";
-  });
+  }
+}
+
+function createLink(){
+  const nick=document.getElementById("nick").value.trim();
+  if(!nick){alert("Enter nickname");return;}
+  const id="L"+Date.now();
+  db.collection("links").doc(id).set({nickname:nick,status:"unused",time:Date.now()});
+  const link=location.origin+location.pathname+"?play="+id;
+  newLink.innerHTML=`<a href="${link}" target="_blank">${link}</a><br>
+  <button class="btn" onclick="navigator.clipboard.writeText('${link}')">Copy</button>`;
 }
 </script>
 </body>
