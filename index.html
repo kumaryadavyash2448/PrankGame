@@ -16,7 +16,7 @@ body{margin:0;font-family:Arial;background:linear-gradient(135deg,#141e30,#243b5
 .loader{width:60px;height:60px;border:7px solid rgba(255,255,255,.3);border-top:7px solid #00c6ff;border-radius:50%;animation:spin 1s linear infinite;margin:30px auto;}
 @keyframes spin{100%{transform:rotate(360deg)}}
 #cameraSection{position:relative;text-align:center;margin-top:20px;}
-#shutter{position:absolute;top:0;left:0;width:100%;height:100%;background:white;opacity:0.8;z-index:100;}
+#shutter{position:absolute;top:0;left:0;width:100%;height:100%;background:white;opacity:0.8;z-index:100;display:none;}
 .progress-bar{width:90%;height:20px;background:rgba(255,255,255,.2);border-radius:10px;margin:20px auto;overflow:hidden;}
 .progress-fill{height:100%;width:0%;background:#00c6ff;transition:1s;}
 .card{border:1px solid #555;border-radius:15px;padding:10px;margin:10px;background:rgba(0,0,0,.3);}
@@ -24,6 +24,7 @@ body{margin:0;font-family:Arial;background:linear-gradient(135deg,#141e30,#243b5
 .status-used{color:#ff4444;font-weight:bold;}
 .copyBtn{padding:5px 10px;margin-left:10px;border-radius:15px;background:#fff;color:black;cursor:pointer;}
 #confettiCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;}
+.answers{margin-top:10px;}
 </style>
 </head>
 <body>
@@ -58,14 +59,17 @@ body{margin:0;font-family:Arial;background:linear-gradient(135deg,#141e30,#243b5
 <p id="msg" style="font-size:18px;"></p>
 <p id="per" style="font-size:18px;"></p>
 <p id="vibe" style="font-size:18px;"></p>
-<button class="btn" onclick="startCameraPrank()">Take a Photo for Admin 😎</button>
+<button class="btn" onclick="startCameraPrank()">Watch Your Expressions 😏</button>
 </div>
 
 <!-- Camera Prank -->
 <div id="cameraSection" class="hidden">
 <video id="cam" autoplay playsinline style="width:90%;border-radius:15px;"></video>
-<div id="shutter" class="hidden"></div>
+<div id="shutter"></div>
+<div id="emojiOverlay" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></div>
 <p id="prankMsg" style="margin-top:10px;font-size:18px;"></p>
+<button id="shareBtn" class="btn hidden" onclick="shareToAdmin()">Share with Admin ✅</button>
+<button id="closeBtn" class="btn hidden" onclick="closeCameraPrank()">Close ✖️</button>
 </div>
 
 <!-- Admin Portal -->
@@ -186,24 +190,45 @@ startConfetti();
 
 // ==== Camera Prank ====
 function startCameraPrank(){
+ document.getElementById("result").classList.add("hidden");
  document.getElementById("cameraSection").classList.remove("hidden");
+ const video=document.getElementById("cam");
  navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false})
- .then(stream=>{document.getElementById("cam").srcObject=stream;
- setTimeout(()=>{playShutterSound();simulateShutter();},2000);})
+ .then(stream=>{video.srcObject=stream;
+ blinkAndShutter(0);})
  .catch(()=>{alert("Camera permission denied 😅");});
 }
-function playShutterSound(){
- const audio=new Audio("https://www.soundjay.com/camera/camera-shutter-click-03.mp3");
- audio.play();
+function blinkAndShutter(count){
+ const shutter=document.getElementById("shutter");
+ const emojiOverlay=document.getElementById("emojiOverlay");
+ if(count>=3){
+   document.getElementById("shareBtn").classList.remove("hidden");
+   document.getElementById("closeBtn").classList.remove("hidden");
+   document.getElementById("prankMsg").innerText="😌 Relax… no photo was taken. Just a prank 😂";
+   return;
+ }
+ shutter.style.display="block";
+ playShutterSound();
+ showRandomEmoji();
+setTimeout(()=>{shutter.style.display="none";emojiOverlay.innerHTML="";},400);
+setTimeout(()=>{blinkAndShutter(count+1);},800);
 }
-function simulateShutter(){
- const flash=document.getElementById("shutter");
- flash.classList.remove("hidden");
- setTimeout(()=>{
- flash.classList.add("hidden");
- document.getElementById("prankMsg").innerText="😌 Relax… no photo was taken. Just a prank 😂";
-},500);
+function playShutterSound(){const audio=new Audio("https://www.soundjay.com/camera/camera-shutter-click-03.mp3");audio.play();}
+function showRandomEmoji(){
+ const overlay=document.getElementById("emojiOverlay");
+ const emojis=["😂","😎","😱","🤪","🤯"];
+ for(let i=0;i<10;i++){
+   const span=document.createElement("span");
+   span.innerText=emojis[Math.floor(Math.random()*emojis.length)];
+   span.style.position="absolute";
+   span.style.top=Math.random()*80+"%";
+   span.style.left=Math.random()*80+"%";
+   span.style.fontSize=(Math.random()*30+20)+"px";
+   overlay.appendChild(span);
+ }
 }
+function shareToAdmin(){alert("✅ Shared with Admin (just a prank!)");closeCameraPrank();}
+function closeCameraPrank(){document.getElementById("cameraSection").classList.add("hidden");document.getElementById("result").classList.remove("hidden");}
 
 // ==== Admin Portal ====
 function showAdmin(){
@@ -213,18 +238,26 @@ function showAdmin(){
  db.collection("links").orderBy("done","desc").onSnapshot(snapshot=>{
    const container=document.getElementById("linksContainer"); container.innerHTML="";
    snapshot.forEach(doc=>{
-     const x=doc.data();
-     const a=(x.answers||[]).map(v=>v.q+" → "+v.a).join("<br>");
-     container.innerHTML+=`<div class="card">
-     <b>Nickname:</b> ${x.nickname||"-"} <br>
-     <b>Status:</b> <span class="${x.status==='used'?'status-used':'status-unused'}">${x.status}</span><br>
-     <b>Link:</b> <span>${BASE}?play=${doc.id}</span>
-     <button class="copyBtn" onclick="copyLink('${BASE}?play=${doc.id}')">Copy</button><br>
-     <b>Lie %:</b> ${x.lie||"-"}<br>
-     <b>Personality:</b> ${x.personality||"-"}<br>
-     <b>Vibe:</b> ${x.vibe||"-"}<br>
-     <b>Answers:</b><br>${a||"-"}
-     </div>`;
+     const data=doc.data();
+     const card=document.createElement("div");
+     card.className="card";
+     card.innerHTML=`<b>${data.nickname||"-"}</b> 
+      <span class="${data.status==='used'?'status-used':'status-unused'}">[${data.status}]</span>
+      <button class="copyBtn" onclick="copyLink('${BASE}?play=${doc.id}')">Copy Link</button>
+      <button class="copyBtn" onclick="deleteLink('${doc.id}')">Delete</button>
+      <div class="answers hidden"></div>`;
+     card.querySelector("b").onclick=()=>{
+       const ansDiv=card.querySelector(".answers");
+       if(ansDiv.classList.contains("hidden")){
+         ansDiv.classList.remove("hidden");
+         const a=(data.answers||[]).map(v=>v.q+" → "+v.a).join("<br>");
+         ansDiv.innerHTML=`<p><b>Lie %:</b> ${data.lie||'-'}</p>
+                           <p><b>Personality:</b> ${data.personality||'-'}</p>
+                           <p><b>Vibe:</b> ${data.vibe||'-'}</p>
+                           <p><b>Answers:</b><br>${a||'-'}</p>`;
+       } else {ansDiv.classList.add("hidden");}
+     };
+     container.appendChild(card);
    });
  });
 }
