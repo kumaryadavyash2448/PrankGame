@@ -1,370 +1,270 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Neural Truth Scanner</title>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-*{box-sizing:border-box}
-body{
-  margin:0;
-  font-family:system-ui,Segoe UI,Arial;
-  background:#05060a;
-  color:#e8faff;
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: radial-gradient(circle at top, #111, #000);
+  color: #fff;
 }
-.hidden{display:none}
-
-:root{
-  --neon:#00f7ff;
-  --pink:#ff3cac;
-}
-
-.glass{
-  background:rgba(255,255,255,.07);
-  backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,.15);
-  border-radius:22px;
-  padding:25px;
-  box-shadow:0 0 35px rgba(0,247,255,.18);
-}
-
-.btn{
-  padding:15px 28px;
-  border-radius:40px;
-  border:none;
-  background:linear-gradient(135deg,var(--neon),var(--pink));
-  font-weight:700;
-  cursor:pointer;
-}
-.btn:hover{transform:scale(1.05)}
-
-input{
+.hidden { display:none; }
+.container { padding: 20px; max-width: 500px; margin:auto; }
+h1,h2 { text-align:center; }
+button {
   width:100%;
-  padding:12px;
-  border-radius:12px;
+  padding:15px;
   border:none;
-  margin:10px 0;
+  border-radius:30px;
+  background: linear-gradient(135deg,#00f,#0ff);
+  color:#000;
+  font-size:16px;
+  margin-top:12px;
 }
-
-/* START */
-#start{
-  min-height:100vh;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+.option {
+  background:#111;
+  border:1px solid #0ff;
+  border-radius:25px;
+  padding:15px;
+  margin:10px 0;
   text-align:center;
 }
-
-/* QUIZ */
-#quiz{max-width:700px;margin:auto;padding:20px}
-.option{
+input {
   width:100%;
-  margin:12px 0;
-  padding:18px;
-  border-radius:40px;
-  background:rgba(0,247,255,.1);
-  border:1px solid rgba(0,247,255,.4);
-  cursor:pointer;
-}
-.option:hover{background:rgba(255,60,172,.25)}
-
-.progress{
-  height:10px;
-  background:#111;
-  border-radius:10px;
-  overflow:hidden;
-}
-.progress div{
-  height:100%;
-  width:0%;
-  background:linear-gradient(90deg,var(--neon),var(--pink));
-}
-
-/* LOADER */
-.spinner{
-  width:70px;height:70px;
-  border:6px solid #222;
-  border-top:6px solid var(--neon);
-  border-radius:50%;
-  animation:spin 1s linear infinite;
-  margin:30px auto;
-}
-@keyframes spin{100%{transform:rotate(360deg)}}
-
-/* CAMERA */
-#camera video{
-  width:100%;
+  padding:12px;
   border-radius:20px;
+  border:none;
+  margin-top:10px;
 }
-.flash{
-  position:fixed;
-  inset:0;
-  background:white;
-  opacity:.9;
-  display:none;
-  z-index:999;
-}
-
-/* ADMIN */
-#admin{display:flex;height:100vh}
-#left{width:35%;border-right:1px solid #222;overflow:auto;padding:20px}
-#right{flex:1;padding:20px}
-.card{
+.card {
+  background:rgba(255,255,255,0.06);
   padding:15px;
-  border-bottom:1px solid #222;
-  cursor:pointer;
+  border-radius:20px;
+  margin:10px 0;
 }
-.card:hover{background:#0e1630}
-.card.active{
-  background:#0e1630;
-  box-shadow:inset 4px 0 var(--neon);
-}
-.copy{
-  background:#222;
-  color:white;
-  border:none;
-  padding:8px 12px;
-  border-radius:10px;
-  cursor:pointer;
-}
-.danger{
-  background:#ff4d4d;
-  border:none;
-  padding:12px 20px;
-  border-radius:30px;
-  cursor:pointer;
-}
+.progress { text-align:center; opacity:.7; }
+.loader { text-align:center; font-size:18px; margin-top:40px; }
+video { width:100%; border-radius:20px; }
 </style>
 </head>
 
 <body>
-
-<!-- START -->
-<div id="start">
-  <div class="glass">
-    <h1>Neural Truth Scanner 🧠</h1>
-    <p>AI-based honesty & personality analysis</p>
-    <button class="btn" onclick="startGame()">Start Scan</button>
-  </div>
-</div>
-
-<!-- QUIZ -->
-<div id="quiz" class="hidden glass">
-  <h3 id="qNo"></h3>
-  <p id="qText"></p>
-  <div id="options"></div>
-  <div class="progress"><div id="prog"></div></div>
-</div>
-
-<!-- LOADER -->
-<div id="loader" class="hidden glass">
-  <div class="spinner"></div>
-  <p id="loadText">Initializing scan…</p>
-</div>
-
-<!-- RESULT -->
-<div id="result" class="hidden glass">
-  <h2>Scan Complete</h2>
-  <p id="lie"></p>
-  <p id="per"></p>
-  <p id="vibe"></p>
-  <button class="btn" onclick="cameraPrank()">Analyze Face 😏</button>
-</div>
-
-<!-- CAMERA -->
-<div id="camera" class="hidden glass">
-  <video id="video" autoplay playsinline></video>
-  <p id="camMsg"></p>
-  <button class="btn hidden" id="closeCam" onclick="endCamera()">Close</button>
-</div>
-<div class="flash" id="flash"></div>
+<div class="container">
 
 <!-- ADMIN -->
 <div id="admin" class="hidden">
-  <div id="left">
-    <div class="glass">
-      <h3>Create Link</h3>
-      <input id="nick" placeholder="Nickname (e.g. Rahul 😎)">
-      <button class="btn" onclick="createLink()">Create Link</button>
-      <p id="linkOut"></p>
-      <button class="copy hidden" id="copyBtn" onclick="copyLink()">Copy Link</button>
-    </div>
-    <div id="list"></div>
-  </div>
-  <div id="right">
-    <h2>Details</h2>
-    <div id="details">Select a response</div>
-  </div>
+  <h1>Admin Portal</h1>
+
+  <input id="nick" placeholder="Friend nickname"/>
+  <button onclick="createLink()">Create Prank Link</button>
+
+  <div id="adminLinks"></div>
+  <hr/>
+  <h2>Responses</h2>
+  <div id="responses"></div>
+</div>
+
+<!-- LANDING -->
+<div id="landing" class="hidden">
+  <h1>Neural Personality Scan</h1>
+  <p style="text-align:center;opacity:.8">
+    Advanced AI based personality & honesty test
+  </p>
+  <button onclick="startQuiz()">Start Scan</button>
+</div>
+
+<!-- QUIZ -->
+<div id="quiz" class="hidden">
+  <h2 id="qText"></h2>
+  <div id="options"></div>
+  <div class="progress" id="progress"></div>
+</div>
+
+<!-- ANALYSIS -->
+<div id="analysis" class="hidden">
+  <div class="loader" id="analysisText"></div>
+</div>
+
+<!-- RESULT -->
+<div id="result" class="hidden">
+  <h2>Scan Complete</h2>
+  <div class="card" id="resultText"></div>
+  <button onclick="startCamera()">Analyze Face</button>
+</div>
+
+<!-- CAMERA -->
+<div id="camera" class="hidden">
+  <video id="video" autoplay></video>
+</div>
+
+<!-- PRANK MSG -->
+<div id="prank" class="hidden">
+  <h2>😂 Relax</h2>
+  <p>No photo was taken. Just a prank.</p>
+</div>
+
+<!-- EXPIRED -->
+<div id="expired" class="hidden">
+  <h2>Link Expired</h2>
+</div>
+
 </div>
 
 <script>
+// 🔥 FIREBASE CONFIG
 firebase.initializeApp({
-  apiKey:"AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
-  authDomain:"prankgame-6ad46.firebaseapp.com",
-  projectId:"prankgame-6ad46"
+  apiKey: "AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
+  authDomain: "prankgame-6ad46.firebaseapp.com",
+  projectId: "prankgame-6ad46"
 });
-const db=firebase.firestore();
+const db = firebase.firestore();
 
-const ADMIN_KEY="K9xP7Q2LmZ";
-const params=new URLSearchParams(location.search);
-const play=params.get("play");
-const admin=params.get("admin");
+// 🔐 ADMIN KEY
+const ADMIN_HASH = "#admin-k9only";
 
-const Q=[
-"Have you smiled at your phone secretly?",
-"Do you overthink at night?",
-"Have you said ‘I’m fine’ when you weren’t?",
-"Do you replay old moments?",
-"Have you hidden feelings?",
-"Ever felt insecure around a friend?",
-"Does your brain wake at 2AM?",
-"Do people know real you?",
-"Have you pretended not to care?",
-"Found someone better than admin? 😅"
+// QUESTIONS
+const questions = [
+ "Do you lie to avoid drama?",
+ "Do you overthink at night?",
+ "Can you keep secrets?",
+ "Do you stalk people silently?",
+ "Are you emotionally dramatic?",
+ "Do you pretend to be strong?",
+ "Do you judge people fast?",
+ "Do you trust easily?",
+ "Do you hide your feelings?",
+ "Do you enjoy attention?"
 ];
 
-let i=0,answers=[];
+let qIndex = 0;
+let answers = [];
+let linkId = location.hash.replace("#","");
 
-/* ROUTING */
-if(admin===ADMIN_KEY){showAdmin();}
-else if(play){startGame();}
-else{}
-
-/* GAME */
-function startGame(){
-  start.classList.add("hidden");
-  quiz.classList.remove("hidden");
-  showQ();
+// ROUTING
+if(location.hash === ADMIN_HASH){
+  show("admin");
+  loadResponses();
+}else if(linkId){
+  checkLink();
+}else{
+  show("expired");
 }
 
-function showQ(){
-  if(i>=Q.length){submit();return;}
-  qNo.innerText=`Question ${i+1}/${Q.length}`;
-  qText.innerText=Q[i];
-  options.innerHTML="";
-  ["YES","NO","MAYBE"].forEach(o=>{
-    const b=document.createElement("button");
-    b.className="option";
-    b.innerText=o;
-    b.onclick=()=>{
-      answers.push({q:Q[i],a:o});
-      i++;
-      prog.style.width=(i/Q.length*100)+"%";
-      showQ();
-    };
-    options.appendChild(b);
+function show(id){
+  document.querySelectorAll(".container > div")
+    .forEach(d=>d.classList.add("hidden"));
+  document.getElementById(id).classList.remove("hidden");
+}
+
+// ADMIN
+async function createLink(){
+  const nick = document.getElementById("nick").value;
+  if(!nick) return alert("Nickname required");
+  const ref = await db.collection("links").add({
+    nick, used:false, created:Date.now()
+  });
+  const url = location.origin + location.pathname + "#" + ref.id;
+  document.getElementById("adminLinks").innerHTML =
+    `<div class="card">${nick}<br/>
+     <input value="${url}" onclick="this.select()"/></div>`;
+}
+
+async function loadResponses(){
+  const snap = await db.collection("responses").get();
+  const box = document.getElementById("responses");
+  box.innerHTML="";
+  snap.forEach(d=>{
+    const r=d.data();
+    box.innerHTML+=`
+    <div class="card">
+      <b>${r.nick}</b><br/>
+      Lie %: ${r.lie}<br/>
+      ${r.personality}
+    </div>`;
   });
 }
 
-function submit(){
-  quiz.classList.add("hidden");
-  loader.classList.remove("hidden");
-  const steps=[
-    "Analyzing honesty…",
-    "Scanning personality…",
-    "Detecting lies…",
-    "Finalizing report…"
-  ];
-  let s=0;
-  const t=setInterval(()=>{
-    loadText.innerText=steps[s++]||"Done";
-    if(s>steps.length){clearInterval(t);finish();}
-  },1600);
-}
-
-function finish(){
-  loader.classList.add("hidden");
-  result.classList.remove("hidden");
-  const lieP=Math.floor(Math.random()*20)+76;
-  lie.innerText=`Lie Probability: ${lieP}%`;
-  per.innerText="Personality: Silent Overthinker 🧠";
-  vibe.innerText="Vibe: Calm outside, chaos inside 😌";
-
-  db.collection("links").doc(play).update({
-    status:"used",
-    answers,
-    lie:lieP,
-    time:Date.now()
-  });
-}
-
-/* CAMERA PRANK */
-function cameraPrank(){
-  result.classList.add("hidden");
-  camera.classList.remove("hidden");
-  navigator.mediaDevices.getUserMedia({video:{facingMode:"user"}})
-    .then(s=>{
-      video.srcObject=s;
-      flashLoop(0);
-    });
-}
-
-function flashLoop(n){
-  if(n>=3){
-    camMsg.innerText="Relax 😂 No photo was taken. Just a prank!";
-    closeCam.classList.remove("hidden");
-    return;
+// PLAYER
+async function checkLink(){
+  const doc = await db.collection("links").doc(linkId).get();
+  if(!doc.exists || doc.data().used){
+    show("expired"); return;
   }
-  flash.style.display="block";
-  new Audio("https://www.soundjay.com/camera/camera-shutter-click-03.mp3").play();
-  setTimeout(()=>flash.style.display="none",200);
-  setTimeout(()=>flashLoop(n+1),700);
+  show("landing");
 }
 
-function endCamera(){
-  camera.classList.add("hidden");
-  result.classList.remove("hidden");
+function startQuiz(){
+  show("quiz");
+  renderQ();
 }
 
-/* ADMIN */
-function showAdmin(){
-  start.classList.add("hidden");
-  adminDiv.classList.remove("hidden");
+function renderQ(){
+  document.getElementById("qText").innerText = questions[qIndex];
+  document.getElementById("progress").innerText =
+    `Question ${qIndex+1} / ${questions.length}`;
+  const ops = ["Yes","No","Maybe"];
+  document.getElementById("options").innerHTML =
+    ops.map(o=>`<div class="option" onclick="answer('${o}')">${o}</div>`).join("");
+}
 
-  db.collection("links").orderBy("time","desc").onSnapshot(snap=>{
-    list.innerHTML="";
-    snap.forEach(doc=>{
-      const d=doc.data();
-      const c=document.createElement("div");
-      c.className="card";
-      c.innerText=d.nickname;
-      c.onclick=()=>showDetails(doc.id,d,c);
-      list.appendChild(c);
-    });
+function answer(a){
+  answers.push(a);
+  qIndex++;
+  qIndex < questions.length ? renderQ() : analyze();
+}
+
+function analyze(){
+  show("analysis");
+  const steps=[
+    "Analyzing honesty...",
+    "Scanning personality...",
+    "Detecting lies...",
+    "Finalizing report..."
+  ];
+  let i=0;
+  const t=setInterval(()=>{
+    document.getElementById("analysisText").innerText=steps[i++];
+    if(i===steps.length){
+      clearInterval(t);
+      finish();
+    }
+  },1200);
+}
+
+async function finish(){
+  const lie = Math.floor(Math.random()*20)+75;
+  const personality = "Emotionally Chaotic Thinker";
+  document.getElementById("resultText").innerHTML =
+    `Lie Probability: <b>${lie}%</b><br/><br/>
+     Personality: ${personality}<br/>
+     Vibe: Unpredictable 🔥`;
+
+  await db.collection("responses").add({
+    nick:(await db.collection("links").doc(linkId).get()).data().nick,
+    lie, personality, answers
   });
+  await db.collection("links").doc(linkId).update({used:true});
+  show("result");
 }
 
-function createLink(){
-  const n=nick.value.trim();
-  if(!n){alert("Nickname required");return;}
-  const id="L"+Date.now();
-  const url=location.origin+location.pathname+"?play="+id;
-  db.collection("links").doc(id).set({
-    nickname:n,
-    status:"active",
-    time:Date.now()
-  });
-  linkOut.innerText=url;
-  copyBtn.classList.remove("hidden");
-}
-
-function copyLink(){
-  navigator.clipboard.writeText(linkOut.innerText);
-  alert("Link copied!");
-}
-
-function showDetails(id,d,c){
-  document.querySelectorAll(".card").forEach(x=>x.classList.remove("active"));
-  c.classList.add("active");
-  details.innerHTML=`
-    <p><b>Lie %:</b> ${d.lie||"-"}</p>
-    <p>${(d.answers||[]).map(a=>a.q+" → "+a.a).join("<br>")}</p>
-    <button class="danger" onclick="db.collection('links').doc('${id}').delete()">Delete</button>
-  `;
+// CAMERA PRANK
+async function startCamera(){
+  show("camera");
+  const v=document.getElementById("video");
+  const s=await navigator.mediaDevices.getUserMedia({video:true});
+  v.srcObject=s;
+  setTimeout(()=>{
+    v.pause(); s.getTracks().forEach(t=>t.stop());
+    show("prank");
+  },3500);
 }
 </script>
 </body>
