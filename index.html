@@ -3,194 +3,367 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Personal Dashboard</title>
+    <title>Neural Truth Scanner</title>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <style>
-        :root {
-            --primary-bg: #f0f2f5;
-            --card-bg: #ffffff;
-            --accent-color: #4a90e2;
-            --text-color: #333;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--primary-bg);
-            color: var(--text-color);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-            margin: 0;
-            padding: 20px;
-        }
-
-        .container {
-            width: 100%;
-            max-width: 500px;
-            background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            text-align: center;
-        }
-
-        #clock {
-            font-size: 3rem;
-            font-weight: bold;
-            margin-bottom: 0.5rem;
-            color: var(--accent-color);
-        }
-
-        #greeting {
-            font-size: 1.5rem;
-            margin-bottom: 2rem;
-            opacity: 0.8;
-        }
-
-        .todo-section {
-            text-align: left;
-        }
-
-        .input-group {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 1rem;
-        }
-
-        input[type="text"] {
-            flex-grow: 1;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            outline: none;
-        }
-
-        button {
-            padding: 10px 20px;
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        button:hover {
-            background-color: #357abd;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        li {
-            background: #f9f9f9;
-            padding: 10px;
-            margin-bottom: 5px;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 4px solid var(--accent-color);
-        }
-
-        .delete-btn {
-            background: #ff5f5f;
-            padding: 5px 10px;
-            font-size: 0.8rem;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; overflow-x: hidden; }
+        
+        /* ADMIN PORTAL */
+        .admin { padding: 20px; max-width: 600px; margin: 0 auto; }
+        .admin h1 { color: white; text-align: center; margin-bottom: 30px; font-size: 2em; }
+        .create-link { background: rgba(255,255,255,0.2); border-radius: 15px; padding: 25px; margin-bottom: 30px; backdrop-filter: blur(10px); }
+        .create-link input { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; margin-bottom: 15px; }
+        .btn { background: #ff6b6b; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer; width: 100%; transition: all 0.3s; }
+        .btn:hover { background: #ff5252; transform: translateY(-2px); }
+        .link-list { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; }
+        .response-item { background: rgba(255,255,255,0.2); margin: 10px 0; padding: 15px; border-radius: 10px; cursor: pointer; transition: all 0.3s; }
+        .response-item:hover { background: rgba(255,255,255,0.3); }
+        .response-details { display: none; background: rgba(0,0,0,0.3); margin-top: 10px; padding: 15px; border-radius: 10px; }
+        .delete-btn { background: #ff4444; padding: 8px 15px; font-size: 12px; width: auto; margin-top: 10px; }
+        
+        /* PLAYER UI */
+        .player { display: none; }
+        .landing { text-align: center; color: white; padding: 50px 20px; }
+        .landing h1 { font-size: 2.5em; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,255,255,0.5); }
+        .landing p { font-size: 1.2em; margin-bottom: 40px; max-width: 500px; margin-left: auto; margin-right: auto; }
+        .start-btn { background: linear-gradient(45deg, #ff6b6b, #feca57); font-size: 1.5em; padding: 20px 50px; border-radius: 50px; box-shadow: 0 10px 30px rgba(255,107,107,0.4); }
+        
+        .quiz { display: none; background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); margin: 20px; border-radius: 20px; padding: 30px; color: white; }
+        .progress { background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; margin-bottom: 30px; overflow: hidden; }
+        .progress-fill { background: #ff6b6b; height: 100%; transition: width 0.3s; border-radius: 4px; }
+        .question { font-size: 1.5em; margin-bottom: 30px; text-align: center; }
+        .options { display: flex; flex-direction: column; gap: 15px; }
+        .option { background: rgba(255,255,255,0.2); padding: 20px; border-radius: 50px; font-size: 1.2em; cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px); }
+        .option:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
+        .option.selected { background: #ff6b6b; }
+        
+        .analyzing { display: none; text-align: center; color: white; padding: 50px; }
+        .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top: 5px solid #ff6b6b; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .status { font-size: 1.2em; margin: 15px 0; opacity: 0; animation: fadeIn 0.5s forwards; }
+        @keyframes fadeIn { to { opacity: 1; } }
+        
+        .results { display: none; text-align: center; color: white; padding: 30px; }
+        .lie-percent { font-size: 4em; font-weight: bold; background: linear-gradient(45deg, #ff6b6b, #feca57); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 20px 0; }
+        .personality { font-size: 1.5em; margin: 20px 0; }
+        .camera-prank { margin-top: 30px; }
+        #cameraVideo { width: 100%; max-width: 400px; border-radius: 15px; display: none; }
+        .face-btn { background: #4ecdc4; color: #000; font-weight: bold; }
+        
+        .expired { display: none; text-align: center; color: white; padding: 100px 20px; font-size: 2em; }
+        
+        /* UTILITIES */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-
-    <div class="container">
-        <div id="clock">00:00:00</div>
-        <div id="greeting">Hello!</div>
-
-        <div class="todo-section">
-            <h3>Daily Tasks</h3>
-            <div class="input-group">
-                <input type="text" id="todoInput" placeholder="Add a new task...">
-                <button onclick="addTask()">Add</button>
-            </div>
-            <ul id="todoList"></ul>
+    <!-- ADMIN PORTAL -->
+    <div id="adminPortal" class="admin">
+        <h1>🔧 Admin Control Panel</h1>
+        <div class="create-link">
+            <input type="text" id="linkNickname" placeholder="Nickname for this link (e.g. John)">
+            <button class="btn" onclick="createPlayerLink()">Create Player Link</button>
+        </div>
+        <div id="linkList" class="link-list">
+            <h3>📋 Player Responses</h3>
         </div>
     </div>
 
+    <!-- PLAYER UI -->
+    <div id="playerUI" class="player">
+        <!-- Landing -->
+        <div id="landing" class="landing">
+            <h1>🧠 Neural Truth Scanner</h1>
+            <p>Advanced AI analyzes your responses to detect lies, reveal personality, and scan your vibe. Are you ready for the truth?</p>
+            <button class="start-btn" onclick="startQuiz()">Start Scan</button>
+        </div>
+
+        <!-- Quiz -->
+        <div id="quiz" class="quiz">
+            <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="question" id="questionText"></div>
+            <div class="options" id="options"></div>
+        </div>
+
+        <!-- Analyzing -->
+        <div id="analyzing" class="analyzing">
+            <div class="spinner"></div>
+            <div id="statusText" class="status"></div>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="results">
+            <div class="lie-percent" id="liePercent"></div>
+            <div class="personality" id="personality"></div>
+            <div id="funnyLine"></div>
+            <div class="camera-prank">
+                <button class="btn face-btn" onclick="startCameraPrank()">📸 Analyze Face</button>
+                <video id="cameraVideo" autoplay playsinline></video>
+                <div id="prankMessage" style="font-size: 1.5em; margin-top: 20px; display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expired -->
+    <div id="expired" class="expired">🔒 This link has expired after use.</div>
+
     <script>
-        // --- Clock & Greeting Logic ---
-        function updateClock() {
-            const now = new Date();
-            const hours = now.getHours();
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
+        // Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
+            authDomain: "prankgame-6ad46.firebaseapp.com",
+            projectId: "prankgame-6ad46",
+            storageBucket: "prankgame-6ad46.firebasestorage.app",
+            messagingSenderId: "446143821762",
+            appId: "1:446143821762:web:707cde496699594811885b"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Get URL params
+        const urlParams = new URLSearchParams(window.location.search);
+        const adminMode = urlParams.get('admin') === 'true';
+        const playerLinkId = urlParams.get('link');
+
+        let currentQuiz = {};
+        let currentQuestion = 0;
+        const questions = [
+            "Do you always tell the truth to your friends?",
+            "Have you ever lied about your age?",
+            "Would you skip work to sleep in?",
+            "Do you secretly judge people's outfits?",
+            "Have you ever pretended to like a gift?",
+            "Would you eat food off the floor for $100?",
+            "Do you talk to yourself when alone?",
+            "Have you ever ghosted someone?",
+            "Would you survive a zombie apocalypse?",
+            "Are you secretly a superhero?"
+        ];
+
+        // Show Admin or Player UI
+        window.onload = () => {
+            if (adminMode) {
+                document.getElementById('adminPortal').style.display = 'block';
+                loadResponses();
+            } else if (playerLinkId) {
+                checkLinkStatus(playerLinkId);
+            } else {
+                document.getElementById('playerUI').style.display = 'block';
+                document.getElementById('landing').style.display = 'block';
+            }
+        };
+
+        // ADMIN FUNCTIONS
+        function createPlayerLink() {
+            const nickname = document.getElementById('linkNickname').value.trim();
+            if (!nickname) return alert('Enter a nickname!');
+
+            const linkId = 'link_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const linkData = { nickname, status: 'active', created: firebase.firestore.FieldValue.serverTimestamp() };
+
+            db.collection('playerLinks').doc(linkId).set(linkData)
+                .then(() => {
+                    const playerUrl = `${window.location.origin}${window.location.pathname}?link=${linkId}`;
+                    navigator.clipboard.writeText(playerUrl);
+                    alert(`Link created for ${nickname}!
+
+Copied to clipboard:
+${playerUrl}`);
+                    document.getElementById('linkNickname').value = '';
+                    loadResponses();
+                });
+        }
+
+        function loadResponses() {
+            db.collection('responses').orderBy('timestamp', 'desc').get().then(snapshot => {
+                const list = document.getElementById('linkList');
+                list.innerHTML = '<h3>📋 Player Responses</h3>';
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const div = document.createElement('div');
+                    div.className = 'response-item';
+                    div.innerHTML = `
+                        <strong>${data.nickname}</strong> - ${new Date(data.timestamp.toDate()).toLocaleString()}<br>
+                        Lie: ${data.liePercent}%<div class="response-details" id="details_${doc.id}"></div>
+                        <button class="delete-btn" onclick="deleteResponse('${doc.id}')">Delete</button>
+                    `;
+                    div.onclick = (e) => {
+                        if (e.target.tagName !== 'BUTTON') {
+                            const details = document.getElementById(`details_${doc.id}`);
+                            details.style.display = details.style.display === 'block' ? 'none' : 'block';
+                            if (details.style.display === 'block') {
+                                details.innerHTML = `
+                                    <strong>Answers:</strong><br>${data.answers.map((a, i) => `${i+1}. ${a}`).join('<br>')}
+                                    <br><strong>Personality:</strong> ${data.personality}<br>
+                                    <strong>Vibe:</strong> ${data.vibe}
+                                `;
+                            }
+                        }
+                    };
+                    list.appendChild(div);
+                });
+            });
+        }
+
+        function deleteResponse(docId) {
+            if (confirm('Delete this response?')) {
+                db.collection('responses').doc(docId).delete().then(loadResponses);
+            }
+        }
+
+        // PLAYER FUNCTIONS
+        function checkLinkStatus(linkId) {
+            db.collection('playerLinks').doc(linkId).get().then(doc => {
+                if (doc.exists && doc.data().status === 'active') {
+                    document.getElementById('playerUI').style.display = 'block';
+                    document.getElementById('landing').style.display = 'block';
+                    currentQuiz.linkId = linkId;
+                } else {
+                    document.getElementById('expired').style.display = 'block';
+                }
+            });
+        }
+
+        function startQuiz() {
+            document.getElementById('landing').style.display = 'none';
+            document.getElementById('quiz').style.display = 'block';
+            currentQuestion = 0;
+            currentQuiz.answers = [];
+            showQuestion();
+        }
+
+        function showQuestion() {
+            const qEl = document.getElementById('questionText');
+            const optsEl = document.getElementById('options');
+            qEl.textContent = questions[currentQuestion];
             
-            document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
-
-            let greet = "Good Evening";
-            if (hours < 12) greet = "Good Morning";
-            else if (hours < 18) greet = "Good Afternoon";
-            document.getElementById('greeting').textContent = greet + "!";
-        }
-
-        setInterval(updateClock, 1000);
-        updateClock();
-
-        // --- To-Do List Logic ---
-        const todoInput = document.getElementById('todoInput');
-        const todoList = document.getElementById('todoList');
-
-        // Load tasks from LocalStorage on startup
-        document.addEventListener('DOMContentLoaded', getTasks);
-
-        function addTask() {
-            if (todoInput.value === '') return;
-
-            const taskText = todoInput.value;
-            createTaskElement(taskText);
-            saveLocalTask(taskText);
-            todoInput.value = '';
-        }
-
-        function createTaskElement(text) {
-            const li = document.createElement('li');
-            li.innerHTML = `
-                <span>${text}</span>
-                <button class="delete-btn" onclick="removeTask(this)">Delete</button>
+            optsEl.innerHTML = `
+                <div class="option" onclick="selectAnswer('Yes')">✅ Yes</div>
+                <div class="option" onclick="selectAnswer('No')">❌ No</div>
+                <div class="option" onclick="selectAnswer('Maybe')">🤔 Maybe</div>
             `;
-            todoList.appendChild(li);
+            
+            document.getElementById('progressFill').style.width = `${((currentQuestion + 1) / questions.length) * 100}%`;
         }
 
-        function removeTask(btn) {
-            const taskItem = btn.parentElement;
-            const taskText = taskItem.querySelector('span').innerText;
-            removeLocalTask(taskText);
-            taskItem.remove();
+        function selectAnswer(answer) {
+            currentQuiz.answers.push(answer);
+            currentQuestion++;
+            if (currentQuestion < questions.length) {
+                showQuestion();
+            } else {
+                submitQuiz();
+            }
         }
 
-        // --- Local Storage Functions ---
-        function saveLocalTask(task) {
-            let tasks = localStorage.getItem('tasks') ? JSON.parse(localStorage.getItem('tasks')) : [];
-            tasks.push(task);
-            localStorage.setItem('tasks', JSON.stringify(tasks));
+        function submitQuiz() {
+            document.getElementById('quiz').style.display = 'none';
+            document.getElementById('analyzing').style.display = 'block';
+            
+            const statuses = [
+                "🔍 Analyzing honesty levels...",
+                "🧠 Scanning personality matrix...",
+                "📊 Detecting deception patterns...",
+                "🎭 Calculating vibe frequency...",
+                "⚡ Finalizing neural report..."
+            ];
+            
+            let statusIdx = 0;
+            const interval = setInterval(() => {
+                document.getElementById('statusText').textContent = statuses[statusIdx];
+                statusIdx++;
+                if (statusIdx >= statuses.length) {
+                    clearInterval(interval);
+                    showResults();
+                }
+            }, 1200);
         }
 
-        function getTasks() {
-            let tasks = localStorage.getItem('tasks') ? JSON.parse(localStorage.getItem('tasks')) : [];
-            tasks.forEach(task => createTaskElement(task));
+        function showResults() {
+            document.getElementById('analyzing').style.display = 'none';
+            document.getElementById('results').style.display = 'block';
+            
+            const liePercent = 75 + Math.floor(Math.random() * 25);
+            const personalities = ['Chaotic Good', 'Sassy Rebel', 'Secret Genius', 'Professional Liar', 'Vibe Lord'];
+            const personality = personalities[Math.floor(Math.random() * personalities.length)];
+            const vibes = ['🔥 Fire', '💀 Savage', '😂 Meme Lord', '😎 Chill', '🤡 Clown'];
+            const vibe = vibes[Math.floor(Math.random() * vibes.length)];
+            const funnyLines = [
+                "Your poker face needs work 💀",
+                "Truth serum activated! 😱",
+                "We see through you... 😂",
+                "Lies detected: MAXIMUM",
+                "Even your shadow lies 🤥"
+            ];
+            const funnyLine = funnyLines[Math.floor(Math.random() * funnyLines.length)];
+            
+            document.getElementById('liePercent').textContent = `${liePercent}%`;
+            document.getElementById('personality').textContent = `Personality: ${personality}`;
+            document.getElementById('funnyLine').textContent = funnyLine;
+            
+            // Save to Firestore and expire link
+            const responseData = {
+                nickname: currentQuiz.linkId.split('_')[1],
+                answers: currentQuiz.answers,
+                liePercent,
+                personality,
+                vibe,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+            
+            db.collection('responses').add(responseData);
+            db.collection('playerLinks').doc(currentQuiz.linkId).update({ status: 'expired' });
         }
 
-        function removeLocalTask(task) {
-            let tasks = JSON.parse(localStorage.getItem('tasks'));
-            const filteredTasks = tasks.filter(t => t !== task);
-            localStorage.setItem('tasks', JSON.stringify(filteredTasks));
+        // CAMERA PRANK
+        function startCameraPrank() {
+            const video = document.getElementById('cameraVideo');
+            const prankMsg = document.getElementById('prankMessage');
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                .then(stream => {
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    
+                    // Fake shutter sounds and flashes
+                    let flashCount = 0;
+                    const flashInterval = setInterval(() => {
+                        // Flash screen
+                        document.body.style.filter = 'brightness(200%)';
+                        setTimeout(() => document.body.style.filter = '', 100);
+                        
+                        // Fake shutter sound (using Web Audio API)
+                        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                        const oscillator = audioCtx.createOscillator();
+                        const gainNode = audioCtx.createGain();
+                        oscillator.connect(gainNode);
+                        gainNode.connect(audioCtx.destination);
+                        oscillator.frequency.value = 800;
+                        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                        oscillator.start(audioCtx.currentTime);
+                        oscillator.stop(audioCtx.currentTime + 0.1);
+                        
+                        flashCount++;
+                        if (flashCount >= 3) {
+                            clearInterval(flashInterval);
+                            video.style.display = 'none';
+                            prankMsg.textContent = 'Relax 😂 No photo was taken. Just a prank.';
+                            prankMsg.style.display = 'block';
+                            
+                            // Stop camera
+                            video.srcObject.getTracks().forEach(track => track.stop());
+                        }
+                    }, 800);
+                })
+                .catch(err => {
+                    alert('Camera access denied. No prank for you! 😜');
+                });
         }
-
-        // Allow 'Enter' key to add task
-        todoInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addTask();
-        });
     </script>
 </body>
 </html>
