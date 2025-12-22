@@ -23,6 +23,15 @@ body{
   --pink:#ff3cac;
 }
 
+.glass{
+  background:rgba(255,255,255,.07);
+  backdrop-filter:blur(14px);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:22px;
+  padding:25px;
+  box-shadow:0 0 35px rgba(0,247,255,.18);
+}
+
 .btn{
   padding:15px 28px;
   border-radius:40px;
@@ -33,13 +42,12 @@ body{
 }
 .btn:hover{transform:scale(1.05)}
 
-.glass{
-  background:rgba(255,255,255,.07);
-  backdrop-filter:blur(14px);
-  border:1px solid rgba(255,255,255,.15);
-  border-radius:22px;
-  padding:25px;
-  box-shadow:0 0 35px rgba(0,247,255,.18);
+input{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:none;
+  margin:10px 0;
 }
 
 /* START */
@@ -103,7 +111,7 @@ body{
 
 /* ADMIN */
 #admin{display:flex;height:100vh}
-#left{width:35%;border-right:1px solid #222;overflow:auto}
+#left{width:35%;border-right:1px solid #222;overflow:auto;padding:20px}
 #right{flex:1;padding:20px}
 .card{
   padding:15px;
@@ -115,12 +123,13 @@ body{
   background:#0e1630;
   box-shadow:inset 4px 0 var(--neon);
 }
-input{
-  width:100%;
-  padding:12px;
-  border-radius:12px;
+.copy{
+  background:#222;
+  color:white;
   border:none;
-  margin:8px 0;
+  padding:8px 12px;
+  border-radius:10px;
+  cursor:pointer;
 }
 .danger{
   background:#ff4d4d;
@@ -138,7 +147,7 @@ input{
 <div id="start">
   <div class="glass">
     <h1>Neural Truth Scanner 🧠</h1>
-    <p>AI-based honesty & personality scan</p>
+    <p>AI-based honesty & personality analysis</p>
     <button class="btn" onclick="startGame()">Start Scan</button>
   </div>
 </div>
@@ -180,12 +189,14 @@ input{
     <div class="glass">
       <h3>Create Link</h3>
       <input id="nick" placeholder="Nickname (e.g. Rahul 😎)">
-      <button class="btn" onclick="createLink()">Create</button>
+      <button class="btn" onclick="createLink()">Create Link</button>
       <p id="linkOut"></p>
+      <button class="copy hidden" id="copyBtn" onclick="copyLink()">Copy Link</button>
     </div>
+    <div id="list"></div>
   </div>
   <div id="right">
-    <h2>Responses</h2>
+    <h2>Details</h2>
     <div id="details">Select a response</div>
   </div>
 </div>
@@ -218,7 +229,7 @@ const Q=[
 
 let i=0,answers=[];
 
-/* INIT */
+/* ROUTING */
 if(admin===ADMIN_KEY){showAdmin();}
 else if(play){startGame();}
 else{}
@@ -236,7 +247,7 @@ function showQ(){
   qText.innerText=Q[i];
   options.innerHTML="";
   ["YES","NO","MAYBE"].forEach(o=>{
-    let b=document.createElement("button");
+    const b=document.createElement("button");
     b.className="option";
     b.innerText=o;
     b.onclick=()=>{
@@ -256,14 +267,13 @@ function submit(){
     "Analyzing honesty…",
     "Scanning personality…",
     "Detecting lies…",
-    "Cross-checking emotions…",
     "Finalizing report…"
   ];
   let s=0;
   const t=setInterval(()=>{
     loadText.innerText=steps[s++]||"Done";
     if(s>steps.length){clearInterval(t);finish();}
-  },1400);
+  },1600);
 }
 
 function finish(){
@@ -313,18 +323,17 @@ function endCamera(){
 /* ADMIN */
 function showAdmin(){
   start.classList.add("hidden");
-  adminDiv=document.getElementById("admin");
   adminDiv.classList.remove("hidden");
 
   db.collection("links").orderBy("time","desc").onSnapshot(snap=>{
-    left.innerHTML=left.innerHTML.split("</div>")[0]+"</div>";
+    list.innerHTML="";
     snap.forEach(doc=>{
       const d=doc.data();
       const c=document.createElement("div");
       c.className="card";
-      c.innerHTML=`<b>${d.nickname}</b><br>${d.status}`;
+      c.innerText=d.nickname;
       c.onclick=()=>showDetails(doc.id,d,c);
-      left.appendChild(c);
+      list.appendChild(c);
     });
   });
 }
@@ -333,12 +342,19 @@ function createLink(){
   const n=nick.value.trim();
   if(!n){alert("Nickname required");return;}
   const id="L"+Date.now();
+  const url=location.origin+location.pathname+"?play="+id;
   db.collection("links").doc(id).set({
     nickname:n,
     status:"active",
     time:Date.now()
   });
-  linkOut.innerHTML=`Link:<br>${location.origin+location.pathname}?play=${id}`;
+  linkOut.innerText=url;
+  copyBtn.classList.remove("hidden");
+}
+
+function copyLink(){
+  navigator.clipboard.writeText(linkOut.innerText);
+  alert("Link copied!");
 }
 
 function showDetails(id,d,c){
