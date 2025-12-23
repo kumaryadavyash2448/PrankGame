@@ -1,397 +1,235 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neural Truth Scanner</title>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
-        body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; overflow-x: hidden; }
-        
-        /* ADMIN PORTAL - ONLY VISIBLE IN ADMIN MODE */
-        .admin { padding: 20px; max-width: 600px; margin: 0 auto; display: none; }
-        .admin.active { display: block; }
-        .admin h1 { color: white; text-align: center; margin-bottom: 30px; font-size: 2em; }
-        .create-link { background: rgba(255,255,255,0.2); border-radius: 15px; padding: 25px; margin-bottom: 30px; backdrop-filter: blur(10px); }
-        .create-link input { width: 100%; padding: 15px; border: none; border-radius: 10px; font-size: 16px; margin-bottom: 15px; }
-        .btn { background: #ff6b6b; color: white; border: none; padding: 15px 30px; border-radius: 10px; font-size: 16px; cursor: pointer; width: 100%; transition: all 0.3s; }
-        .btn:hover { background: #ff5252; transform: translateY(-2px); }
-        .link-list { background: rgba(255,255,255,0.1); border-radius: 15px; padding: 20px; }
-        .response-item { background: rgba(255,255,255,0.2); margin: 10px 0; padding: 15px; border-radius: 10px; cursor: pointer; transition: all 0.3s; }
-        .response-item:hover { background: rgba(255,255,255,0.3); }
-        .response-details { display: none; background: rgba(0,0,0,0.3); margin-top: 10px; padding: 15px; border-radius: 10px; }
-        .delete-btn { background: #ff4444; padding: 8px 15px; font-size: 12px; width: auto; margin-top: 10px; }
-        
-        /* PLAYER UI */
-        .player { display: none; }
-        .player.active { display: block; }
-        .landing { text-align: center; color: white; padding: 50px 20px; }
-        .landing h1 { font-size: 2.5em; margin-bottom: 20px; text-shadow: 0 0 20px rgba(255,255,255,0.5); }
-        .landing p { font-size: 1.2em; margin-bottom: 40px; max-width: 500px; margin-left: auto; margin-right: auto; }
-        .start-btn { background: linear-gradient(45deg, #ff6b6b, #feca57); font-size: 1.5em; padding: 20px 50px; border-radius: 50px; box-shadow: 0 10px 30px rgba(255,107,107,0.4); }
-        
-        .quiz { display: none; background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); margin: 20px; border-radius: 20px; padding: 30px; color: white; }
-        .progress { background: rgba(255,255,255,0.2); height: 8px; border-radius: 4px; margin-bottom: 30px; overflow: hidden; }
-        .progress-fill { background: #ff6b6b; height: 100%; transition: width 0.3s; border-radius: 4px; }
-        .question { font-size: 1.5em; margin-bottom: 30px; text-align: center; }
-        .options { display: flex; flex-direction: column; gap: 15px; }
-        .option { background: rgba(255,255,255,0.2); padding: 20px; border-radius: 50px; font-size: 1.2em; cursor: pointer; transition: all 0.3s; backdrop-filter: blur(10px); }
-        .option:hover { background: rgba(255,255,255,0.3); transform: scale(1.05); }
-        .option.selected { background: #ff6b6b; }
-        
-        .analyzing { display: none; text-align: center; color: white; padding: 50px; }
-        .spinner { width: 50px; height: 50px; border: 5px solid rgba(255,255,255,0.3); border-top: 5px solid #ff6b6b; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .status { font-size: 1.2em; margin: 15px 0; opacity: 0; animation: fadeIn 0.5s forwards; }
-        @keyframes fadeIn { to { opacity: 1; } }
-        
-        /* IMPROVED RESULTS */
-        .results { display: none; text-align: center; color: white; padding: 30px; background: rgba(255,255,255,0.1); backdrop-filter: blur(20px); margin: 20px; border-radius: 20px; }
-        .results h2 { font-size: 2em; margin-bottom: 20px; background: linear-gradient(45deg, #ff6b6b, #feca57); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .lie-circle { width: 200px; height: 200px; margin: 20px auto; background: conic-gradient(#ff6b6b 0deg, #ff6b6b calc(var(--lie-percent) * 3.6deg), #4ecdc4 calc(var(--lie-percent) * 3.6deg) 360deg); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5em; font-weight: bold; color: white; text-shadow: 0 0 10px rgba(0,0,0,0.5); box-shadow: 0 20px 40px rgba(255,107,107,0.4); }
-        .personality-card { background: rgba(255,255,255,0.2); margin: 20px auto; padding: 20px; border-radius: 15px; max-width: 300px; backdrop-filter: blur(10px); }
-        .vibe-tag { font-size: 1.5em; padding: 10px 20px; border-radius: 50px; display: inline-block; margin: 10px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-        .funny-line { font-size: 1.3em; margin: 30px 0; font-style: italic; color: #feca57; text-shadow: 0 0 10px rgba(254,202,87,0.5); }
-        .camera-prank { margin-top: 40px; }
-        #cameraVideo { width: 100%; max-width: 400px; border-radius: 15px; display: none; border: 3px solid #ff6b6b; }
-        .face-btn { background: linear-gradient(45deg, #4ecdc4, #44a08d); color: white; font-weight: bold; font-size: 1.2em; padding: 15px 40px; border-radius: 50px; box-shadow: 0 10px 30px rgba(78,205,196,0.4); }
-        .prank-message { font-size: 1.8em; margin-top: 20px; padding: 20px; background: rgba(255,255,255,0.2); border-radius: 15px; backdrop-filter: blur(10px); animation: bounce 0.6s ease-out; }
-        @keyframes bounce { 0%, 20%, 50%, 80%, 100% { transform: translateY(0); } 40% { transform: translateY(-10px); } 60% { transform: translateY(-5px); } }
-        
-        .expired { display: none; text-align: center; color: white; padding: 100px 20px; font-size: 2em; }
-        
-        /* UTILITIES */
-        .hidden { display: none !important; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prank Personality & Vibe Test 🔮</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<style>
+body{margin:0;font-family:Arial;background:linear-gradient(135deg,#141e30,#243b55);color:white;}
+.container{max-width:600px;margin:auto;padding:20px;}
+.hidden{display:none;}
+.option{width:90%;padding:18px;margin:12px auto;border-radius:50px;border:none;background:rgba(255,255,255,.2);color:white;font-size:18px;cursor:pointer;transition:0.3s;}
+.option:hover{background:rgba(255,255,255,.35);transform:scale(1.05);}
+.btn{padding:15px 30px;border-radius:40px;background:#00c6ff;color:black;font-size:18px;cursor:pointer;margin:10px auto;display:block;}
+.loader{width:60px;height:60px;border:7px solid rgba(255,255,255,.3);border-top:7px solid #00c6ff;border-radius:50%;animation:spin 1s linear infinite;margin:30px auto;}
+@keyframes spin{100%{transform:rotate(360deg)}}
+#cameraSection{position:relative;text-align:center;margin-top:20px;}
+#shutter{position:absolute;top:0;left:0;width:100%;height:100%;background:white;opacity:0.8;z-index:100;}
+.progress-bar{width:90%;height:20px;background:rgba(255,255,255,.2);border-radius:10px;margin:20px auto;overflow:hidden;}
+.progress-fill{height:100%;width:0%;background:#00c6ff;transition:1s;}
+.card{border:1px solid #555;border-radius:15px;padding:10px;margin:10px;}
+.status-unused{color:#00ff00;font-weight:bold;}
+.status-used{color:#ff4444;font-weight:bold;}
+.copyBtn{padding:5px 10px;margin-left:10px;border-radius:15px;background:#fff;color:black;cursor:pointer;}
+</style>
 </head>
 <body>
-    <!-- ADMIN PORTAL - COMPLETELY HIDDEN FROM PLAYER -->
-    <div id="adminPortal" class="admin">
-        <h1>🔧 Admin Control Panel</h1>
-        <div class="create-link">
-            <input type="text" id="linkNickname" placeholder="Nickname for this link (e.g. John)">
-            <button class="btn" onclick="createPlayerLink()">🚀 Create Player Link</button>
-        </div>
-        <div id="linkList" class="link-list">
-            <h3>📋 Player Responses</h3>
-        </div>
-    </div>
+<div class="container">
 
-    <!-- PLAYER UI - COMPLETELY SEPARATE -->
-    <div id="playerUI" class="player">
-        <!-- Landing -->
-        <div id="landing" class="landing">
-            <h1>🧠 Neural Truth Scanner</h1>
-            <p>Advanced AI analyzes your responses to detect lies, reveal personality, and scan your vibe. Are you ready for the truth?</p>
-            <button class="start-btn" onclick="startQuiz()">Start Scan</button>
-        </div>
+<!-- Landing Page -->
+<div id="start">
+<h1 style="text-align:center">Personality & Vibe Test 🔮</h1>
+<p style="text-align:center">Answer honestly… or try 😏</p>
+<center><button class="btn" onclick="initApp()">Start Test</button></center>
+</div>
 
-        <!-- Quiz -->
-        <div id="quiz" class="quiz">
-            <div class="progress"><div class="progress-fill" id="progressFill"></div></div>
-            <div class="question" id="questionText"></div>
-            <div class="options" id="options"></div>
-        </div>
+<!-- Question Section -->
+<div id="qBox" class="hidden">
+<h2 id="qNo"></h2>
+<p id="qText"></p>
+<div id="opts"></div>
+</div>
 
-        <!-- Analyzing -->
-        <div id="analyzing" class="analyzing">
-            <div class="spinner"></div>
-            <div id="statusText" class="status"></div>
-        </div>
+<!-- Loading / Analysis -->
+<div id="loading" class="hidden">
+<div class="loader"></div>
+<p id="loadText" style="text-align:center;font-size:18px;"></p>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+</div>
 
-        <!-- IMPROVED Results -->
-        <div id="results" class="results">
-            <h2>SCAN COMPLETE! 🎯</h2>
-            <div class="lie-circle" id="lieCircle">--%</div>
-            <div class="funny-line" id="funnyLine"></div>
-            <div class="personality-card">
-                <div style="font-size: 1.3em; margin-bottom: 10px;">Personality Type</div>
-                <div id="personality" style="font-size: 1.5em; font-weight: bold;"></div>
-            </div>
-            <div id="vibeDisplay"></div>
-            <div class="camera-prank">
-                <button class="face-btn" onclick="startCameraPrank()">📸 Enhanced Face Analysis</button>
-                <video id="cameraVideo" autoplay playsinline muted></video>
-                <div id="prankMessage" class="prank-message"></div>
-            </div>
-        </div>
-    </div>
+<!-- Result Section -->
+<div id="result" class="hidden" style="text-align:center;">
+<h2>Results</h2>
+<p id="lie" style="font-size:20px;"></p>
+<p id="msg" style="font-size:18px;"></p>
+<p id="per" style="font-size:18px;"></p>
+<p id="vibe" style="font-size:18px;"></p>
+<button class="btn" onclick="startCameraPrank()">Take a Photo for Admin 😎</button>
+</div>
 
-    <!-- Expired -->
-    <div id="expired" class="expired">🔒 This link has expired after use.</div>
+<!-- Camera Prank -->
+<div id="cameraSection" class="hidden">
+<video id="cam" autoplay playsinline style="width:90%;border-radius:15px;"></video>
+<div id="shutter" class="hidden"></div>
+<p id="prankMsg" style="margin-top:10px;font-size:18px;"></p>
+</div>
 
-    <script>
-        // Firebase Config
-        const firebaseConfig = {
-            apiKey: "AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
-            authDomain: "prankgame-6ad46.firebaseapp.com",
-            projectId: "prankgame-6ad46",
-            storageBucket: "prankgame-6ad46.firebasestorage.app",
-            messagingSenderId: "446143821762",
-            appId: "1:446143821762:web:707cde496699594811885b"
-        };
+<!-- Admin Portal -->
+<div id="adminPortal" class="hidden">
+<h1>Creator Portal 🔐</h1>
+<input id="nick" placeholder="Link nickname">
+<button class="btn" onclick="createLink()">Create Link</button>
+<div id="linksContainer"></div>
+</div>
 
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
+</div>
 
-        // Get URL params
-        const urlParams = new URLSearchParams(window.location.search);
-        const adminMode = urlParams.get('admin') === 'true';
-        const playerLinkId = urlParams.get('link');
+<script>
+// ==== Firebase Init ====
+firebase.initializeApp({
+ apiKey:"AIzaSyAuLOmBQ3xKNcYN2rzOo-3gY3-2UqIIyWk",
+ authDomain:"prankgame-6ad46.firebaseapp.com",
+ projectId:"prankgame-6ad46"
+});
+const db=firebase.firestore();
+const params=new URLSearchParams(location.search);
+const playId=params.get("play");
+const adminKey=params.get("admin");
 
-        let currentQuiz = {};
-        let currentQuestion = 0;
-        const questions = [
-            "Do you always tell the truth to your friends?",
-            "Have you ever lied about your age?",
-            "Would you skip work to sleep in?",
-            "Do you secretly judge people's outfits?",
-            "Have you ever pretended to like a gift?",
-            "Would you eat food off the floor for $100?",
-            "Do you talk to yourself when alone?",
-            "Have you ever ghosted someone?",
-            "Would you survive a zombie apocalypse?",
-            "Are you secretly a superhero?"
-        ];
+// ==== Questions & Data ====
+const Q=[
+{q:"😶‍🌫️ Have you ever smiled at your phone and quickly locked it?",o:["😂 YES","😬 NO","🤔 MAYBE"]},
+{q:"🧠 Do you overthink conversations that already ended?",o:["😏 YES","🙄 NO","😐 MAYBE"]},
+{q:"😌 Have you said “I’m fine” when you weren’t?",o:["😅 YES","😶 NO","🤷‍♂️ MAYBE"]},
+{q:"👀 Ever stalked someone accidentally liking old post?",o:["😎 YES","🙈 NO","😐 MAYBE"]},
+{q:"🌙 Does your brain become creative at 2 AM?",o:["🌟 YES","😴 NO","🤔 MAYBE"]},
+{q:"😳 Have you hidden feelings when someone asked directly?",o:["😬 YES","😶 NO","🤔 MAYBE"]},
+{q:"😵‍💫 Have you felt insecure around a friend?",o:["😅 YES","🙄 NO","🤔 MAYBE"]},
+{q:"🌀 Have you replayed conversations in your head?",o:["😏 YES","🙄 NO","🤷‍♂️ MAYBE"]},
+{q:"🤯 Do you overthink at night?",o:["😵 YES","😶 NO","😐 MAYBE"]},
+{q:"😅 Have you found a better person than admin?",o:["No 😵‍💫","Yash 😁"]}
+];
 
-        // STRICT UI SEPARATION
-        window.onload = () => {
-            if (adminMode) {
-                // ONLY show admin - hide everything else
-                document.getElementById('adminPortal').classList.add('active');
-                loadResponses();
-            } else if (playerLinkId) {
-                // ONLY show player flow - admin completely hidden
-                checkLinkStatus(playerLinkId);
-            } else {
-                // Default landing (no admin visible)
-                document.getElementById('playerUI').classList.add('active');
-                document.getElementById('landing').style.display = 'block';
-            }
-        };
+const personalities=["Silent Overthinker 🧠","Chill but Observant 😎","Drama Friendly 🎭","Secret Keeper 🤐","Curious Explorer 🔍"];
+const vibes=["Calm but unpredictable","Friendly with hidden depth","Low drama, high awareness","Energetic and spontaneous","Quiet but sharp"];
+const funLines=["You answered confidently… maybe too confidently 😏","Your honesty fluctuated during the test","Sometimes honesty is complicated 😉","You know the truth, but chose convenience"];
+let i=0,ans=[];
 
-        // ADMIN FUNCTIONS (NEVER VISIBLE TO PLAYER)
-        function createPlayerLink() {
-            const nickname = document.getElementById('linkNickname').value.trim();
-            if (!nickname) return alert('Enter a nickname!');
+// ==== Init App based on URL ====
+function initApp(){
+ if(adminKey){
+   showAdmin();
+ } else if(playId){
+   startTest();
+ } else {
+   alert("Invalid or expired link");
+ }
+}
 
-            const linkId = 'link_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-            const linkData = { nickname, status: 'active', created: firebase.firestore.FieldValue.serverTimestamp() };
+// ==== Test Flow ====
+async function startTest(){
+ const doc=await db.collection("links").doc(playId).get();
+ if(!doc.exists||doc.data().status==="used"){alert("Link already used");return;}
+ document.getElementById("start").classList.add("hidden");
+ showQ();
+}
 
-            db.collection('playerLinks').doc(linkId).set(linkData)
-                .then(() => {
-                    const playerUrl = `${window.location.origin}${window.location.pathname}?link=${linkId}`;
-                    navigator.clipboard.writeText(playerUrl);
-                    alert(`✅ Link created for ${nickname}!
+function showQ(){
+ if(i>=Q.length){submit();return;}
+ document.getElementById("qBox").classList.remove("hidden");
+ document.getElementById("qNo").innerText="Question "+(i+1);
+ document.getElementById("qText").innerText=Q[i].q;
+ const o=document.getElementById("opts");o.innerHTML="";
+ Q[i].o.forEach(v=>{
+  const b=document.createElement("button");
+  b.className="option";b.innerText=v;
+  b.onclick=()=>{ans.push({q:Q[i].q,a:v});i++;showQ();}
+  o.appendChild(b);
+ });
+}
 
-Copied to clipboard:
-${playerUrl}`);
-                    document.getElementById('linkNickname').value = '';
-                    loadResponses();
-                });
-        }
+function submit(){
+ document.getElementById("qBox").classList.add("hidden");
+ document.getElementById("loading").classList.remove("hidden");
+const steps=["🔍 Analyzing honesty…","🧠 Scanning personality…","🎭 Checking vibes…","📊 Finalizing report…"];
+let s=0;
+const loadText=document.getElementById("loadText");
+const fill=document.getElementById("progressFill");
+const interval=setInterval(()=>{
+  if(s>=steps.length){clearInterval(interval);showResults();return;}
+  loadText.innerText=steps[s];
+  fill.style.width=((s+1)/steps.length*100)+"%";
+  s++;
+},1200);
 
-        function loadResponses() {
-            db.collection('responses').orderBy('timestamp', 'desc').get().then(snapshot => {
-                const list = document.getElementById('linkList');
-                list.innerHTML = '<h3>📋 Player Responses (' + snapshot.size + ')</h3>';
-                if (snapshot.empty) {
-                    list.innerHTML += '<p style="color: #ccc; text-align: center;">No responses yet. Create some links!</p>';
-                    return;
-                }
-                snapshot.forEach(doc => {
-                    const data = doc.data();
-                    const div = document.createElement('div');
-                    div.className = 'response-item';
-                    div.innerHTML = `
-                        <strong>${data.nickname || 'Unknown'}</strong> - ${data.liePercent}% lies<br>
-                        <small>${new Date(data.timestamp.toDate()).toLocaleString()}</small>
-                        <div class="response-details" id="details_${doc.id}">
-                            <strong>Q&A:</strong><br>${data.answers.map((a, i) => `${i+1}. ${a}`).join('<br>')}
-                            <br><strong>Personality:</strong> ${data.personality}<br>
-                            <strong>Vibe:</strong> ${data.vibe}
-                        </div>
-                        <button class="delete-btn" onclick="deleteResponse('${doc.id}'); event.stopPropagation();">🗑️ Delete</button>
-                    `;
-                    div.onclick = (e) => {
-                        if (e.target.tagName !== 'BUTTON') {
-                            const details = document.getElementById(`details_${doc.id}`);
-                            details.style.display = details.style.display === 'block' ? 'none' : 'block';
-                        }
-                    };
-                    list.appendChild(div);
-                });
-            });
-        }
+const lie=Math.floor(Math.random()*20)+76;
+setTimeout(()=>{
+ db.collection("links").doc(playId).update({
+  status:"used",
+  answers:ans,
+  lie,
+  personality:personalities[Math.floor(Math.random()*personalities.length)],
+  vibe:vibes[Math.floor(Math.random()*vibes.length)],
+  done:Date.now()
+ });
+},5000);
+}
 
-        function deleteResponse(docId) {
-            if (confirm('Delete this response?')) {
-                db.collection('responses').doc(docId).delete().then(loadResponses);
-            }
-        }
+function showResults(){
+ document.getElementById("loading").classList.add("hidden");
+ document.getElementById("result").classList.remove("hidden");
+const liePercent=Math.floor(Math.random()*20)+76;
+document.getElementById("lie").innerText="Lie Probability: "+liePercent+"%";
+document.getElementById("msg").innerText=funLines[Math.floor(Math.random()*funLines.length)];
+document.getElementById("per").innerText="Personality: "+personalities[Math.floor(Math.random()*personalities.length)];
+document.getElementById("vibe").innerText="Vibe: "+vibes[Math.floor(Math.random()*vibes.length)];
+}
 
-        // PLAYER FUNCTIONS (ADMIN COMPLETELY HIDDEN)
-        function checkLinkStatus(linkId) {
-            db.collection('playerLinks').doc(linkId).get().then(doc => {
-                if (doc.exists && doc.data().status === 'active') {
-                    document.getElementById('playerUI').classList.add('active');
-                    document.getElementById('landing').style.display = 'block';
-                    currentQuiz.linkId = linkId;
-                    currentQuiz.nickname = doc.data().nickname;
-                } else {
-                    document.getElementById('expired').style.display = 'block';
-                }
-            });
-        }
+// ==== Camera Prank ====
+function startCameraPrank(){
+ document.getElementById("cameraSection").classList.remove("hidden");
+ navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false})
+ .then(stream=>{document.getElementById("cam").srcObject=stream;
+ setTimeout(()=>{playShutterSound();simulateShutter();},2000);})
+ .catch(()=>{alert("Camera permission denied 😅");});
+}
+function playShutterSound(){
+ const audio=new Audio("https://www.soundjay.com/camera/camera-shutter-click-03.mp3");
+ audio.play();
+}
+function simulateShutter(){
+ const flash=document.getElementById("shutter");
+ flash.classList.remove("hidden");
+ setTimeout(()=>{
+ flash.classList.add("hidden");
+ document.getElementById("prankMsg").innerText="😌 Relax… no photo was taken. Just a prank 😂";
+},500);
+}
 
-        function startQuiz() {
-            document.getElementById('landing').style.display = 'none';
-            document.getElementById('quiz').style.display = 'block';
-            currentQuestion = 0;
-            currentQuiz.answers = [];
-            showQuestion();
-        }
+// ==== Admin Portal ====
+function showAdmin(){
+ document.getElementById("start").classList.add("hidden");
+ document.getElementById("adminPortal").classList.remove("hidden");
+ const BASE=location.origin+location.pathname;
+ db.collection("links").orderBy("done","desc").onSnapshot(snapshot=>{
+   const container=document.getElementById("linksContainer"); container.innerHTML="";
+   snapshot.forEach(doc=>{
+     const x=doc.data();
+     const a=(x.answers||[]).map(v=>v.q+" → "+v.a).join("<br>");
+     container.innerHTML+=`<div class="card">
+     <b>Nickname:</b> ${x.nickname||"-"} <br>
+     <b>Status:</b> <span class="${x.status==='used'?'status-used':'status-unused'}">${x.status}</span><br>
+     <b>Link:</b> <span>${BASE}?play=${doc.id}</span>
+     <button class="copyBtn" onclick="copyLink('${BASE}?play=${doc.id}')">Copy</button><br>
+     <b>Lie %:</b> ${x.lie||"-"}<br>
+     <b>Personality:</b> ${x.personality||"-"}<br>
+     <b>Vibe:</b> ${x.vibe||"-"}<br>
+     <b>Answers:</b><br>${a||"-"}
+     </div>`;
+   });
+ });
+}
 
-        function showQuestion() {
-            document.getElementById('questionText').textContent = questions[currentQuestion];
-            document.getElementById('options').innerHTML = `
-                <div class="option" onclick="selectAnswer('Yes')">✅ Yes</div>
-                <div class="option" onclick="selectAnswer('No')">❌ No</div>
-                <div class="option" onclick="selectAnswer('Maybe')">🤔 Maybe</div>
-            `;
-            document.getElementById('progressFill').style.width = `${((currentQuestion + 1) / questions.length) * 100}%`;
-        }
+function createLink(){
+ const n=nick.value.trim();if(!n)return alert("Enter nickname");
+ const id="L"+Date.now();
+ db.collection("links").doc(id).set({nickname:n,status:"unused",created:Date.now()})
+ .then(()=>{navigator.clipboard.writeText(location.origin+location.pathname+"?play="+id);alert("Link copied!");});
+}
 
-        function selectAnswer(answer) {
-            currentQuiz.answers.push(answer);
-            currentQuestion++;
-            if (currentQuestion < questions.length) {
-                showQuestion();
-            } else {
-                submitQuiz();
-            }
-        }
-
-        function submitQuiz() {
-            document.getElementById('quiz').style.display = 'none';
-            document.getElementById('analyzing').style.display = 'block';
-            
-            const statuses = [
-                "🔍 Analyzing honesty levels...",
-                "🧠 Scanning personality matrix...",
-                "📊 Detecting deception patterns...",
-                "🎭 Calculating vibe frequency...",
-                "⚡ Finalizing neural report...",
-                "🎉 Generating final verdict..."
-            ];
-            
-            let statusIdx = 0;
-            const interval = setInterval(() => {
-                document.getElementById('statusText').textContent = statuses[statusIdx];
-                statusIdx++;
-                if (statusIdx >= statuses.length) {
-                    clearInterval(interval);
-                    showResults();
-                }
-            }, 1000);
-        }
-
-        function showResults() {
-            document.getElementById('analyzing').style.display = 'none';
-            document.getElementById('results').style.display = 'block';
-            
-            const liePercent = 70 + Math.floor(Math.random() * 30);
-            const personalities = ['Chaotic Good', 'Sassy Rebel', 'Secret Genius', 'Professional Liar', 'Vibe Lord', 'Meme Overlord'];
-            const personality = personalities[Math.floor(Math.random() * personalities.length)];
-            const vibes = ['🔥 Fire', '💀 Savage', '😂 Meme Lord', '😎 Chill', '🤡 Clown', '⚡ Electric'];
-            const vibe = vibes[Math.floor(Math.random() * vibes.length)];
-            const funnyLines = [
-                "Your poker face needs serious work 💀",
-                "Truth serum activated! The results don't lie 😱",
-                "We see right through you... 😂",
-                "Lies detected: MAXIMUM OVERDRIVE",
-                "Even your shadow wouldn't trust you 🤥",
-                "The AI is judging you harder than your mom"
-            ];
-            const funnyLine = funnyLines[Math.floor(Math.random() * funnyLines.length)];
-            
-            // Set dynamic circle
-            const lieCircle = document.getElementById('lieCircle');
-            lieCircle.style.setProperty('--lie-percent', liePercent);
-            lieCircle.textContent = `${liePercent}%`;
-            
-            document.getElementById('funnyLine').textContent = funnyLine;
-            document.getElementById('personality').textContent = personality;
-            document.getElementById('vibeDisplay').innerHTML = `<div class="vibe-tag" style="background: linear-gradient(45deg, ${liePercent > 85 ? '#ff6b6b' : '#4ecdc4'}, #feca57);">${vibe}</div>`;
-            
-            // Save and expire
-            const responseData = {
-                nickname: currentQuiz.nickname,
-                answers: currentQuiz.answers,
-                liePercent,
-                personality,
-                vibe,
-                timestamp: firebase.firestore.FieldValue.serverTimestamp()
-            };
-            
-            db.collection('responses').add(responseData);
-            db.collection('playerLinks').doc(currentQuiz.linkId).update({ status: 'expired' });
-        }
-
-        // ENHANCED CAMERA PRANK
-        function startCameraPrank() {
-            const video = document.getElementById('cameraVideo');
-            const prankMsg = document.getElementById('prankMessage');
-            
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
-                .then(stream => {
-                    video.srcObject = stream;
-                    video.style.display = 'block';
-                    
-                    // 3x flash + shutter with delays
-                    let flashCount = 0;
-                    const flashInterval = setInterval(() => {
-                        // Dramatic flash
-                        document.body.style.background = '#fff';
-                        document.body.style.transition = 'background 0.1s';
-                        setTimeout(() => {
-                            document.body.style.background = '';
-                            document.body.style.transition = '';
-                        }, 100);
-                        
-                        // Enhanced shutter sound
-                        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                        const oscillator = audioCtx.createOscillator();
-                        const gainNode = audioCtx.createGain();
-                        oscillator.connect(gainNode);
-                        gainNode.connect(audioCtx.destination);
-                        oscillator.frequency.setValueAtTime(800, audioCtx.currentTime);
-                        oscillator.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.1);
-                        gainNode.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                        gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                        oscillator.start(audioCtx.currentTime);
-                        oscillator.stop(audioCtx.currentTime + 0.2);
-                        
-                        flashCount++;
-                        if (flashCount >= 3) {
-                            clearInterval(flashInterval);
-                            setTimeout(() => {
-                                video.style.display = 'none';
-                                prankMsg.innerHTML = '😅😂<br><strong>RELAX! No photo was taken.<br>Just a prank! 🎉</strong>';
-                                prankMsg.style.display = 'block';
-                                stream.getTracks().forEach(track => track.stop());
-                            }, 500);
-                        }
-                    }, 700);
-                })
-                .catch(err => {
-                    document.getElementById('prankMessage').innerHTML = '😜 Camera blocked? No prank for you today!';
-                    document.getElementById('prankMessage').style.display = 'block';
-                });
-        }
-    </script>
+function copyLink(link){navigator.clipboard.writeText(link);alert("Copied!");}
+</script>
 </body>
 </html>
